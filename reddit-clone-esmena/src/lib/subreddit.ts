@@ -1,0 +1,71 @@
+import { databases, DATABASE_ID, SUBREDDITS_COLLECTION } from "./appwrite"
+import { Query, ID } from "appwrite"
+
+export async function createSubreddit(name: string, description: string, creatorId: string) {
+  try {
+    const subreddit = await databases.createDocument(DATABASE_ID, SUBREDDITS_COLLECTION, ID.unique(), {
+      name: name.toLowerCase(),
+      description: description || "",
+      creatorId,
+      memberCount: 1,
+      isPublic: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    })
+    return subreddit
+  } catch (error: any) {
+    throw new Error(error.message || "Failed to create subreddit")
+  }
+}
+
+export async function getSubredditByName(name: string) {
+  try {
+    const response = await databases.listDocuments(DATABASE_ID, SUBREDDITS_COLLECTION, [
+      Query.equal("name", name.toLowerCase()),
+    ])
+    return response.documents[0] || null
+  } catch (error) {
+    console.error("Failed to fetch subreddit:", error)
+    return null
+  }
+}
+
+export async function getAllSubreddits(limit = 50, offset = 0) {
+  try {
+    const response = await databases.listDocuments(DATABASE_ID, SUBREDDITS_COLLECTION, [
+      Query.limit(limit),
+      Query.offset(offset),
+      Query.orderDesc("memberCount"),
+    ])
+    return response
+  } catch (error) {
+    console.error("Failed to fetch subreddits:", error)
+    return { documents: [], total: 0 }
+  }
+}
+
+export async function joinSubreddit(subredditId: string) {
+  try {
+    const subreddit = await databases.getDocument(DATABASE_ID, SUBREDDITS_COLLECTION, subredditId)
+    await databases.updateDocument(DATABASE_ID, SUBREDDITS_COLLECTION, subredditId, {
+      memberCount: (subreddit.memberCount || 0) + 1,
+    })
+    return true
+  } catch (error) {
+    console.error("Failed to join subreddit:", error)
+    return false
+  }
+}
+
+export async function leaveSubreddit(subredditId: string) {
+  try {
+    const subreddit = await databases.getDocument(DATABASE_ID, SUBREDDITS_COLLECTION, subredditId)
+    await databases.updateDocument(DATABASE_ID, SUBREDDITS_COLLECTION, subredditId, {
+      memberCount: Math.max(0, (subreddit.memberCount || 1) - 1),
+    })
+    return true
+  } catch (error) {
+    console.error("Failed to leave subreddit:", error)
+    return false
+  }
+}
