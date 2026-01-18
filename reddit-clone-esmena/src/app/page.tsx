@@ -86,7 +86,7 @@ export default function Home() {
       <div className="flex">
         <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} isAuthenticated={isAuthenticated} />
 
-        {/* Main Content */}
+        {/* Main Content - flex-1 makes it automatically stretch/shrink with sidebar */}
         <main className="flex-1 max-w-3xl mx-auto px-4 py-6 w-full">
           <div className="space-y-6">
             {/* Create Post */}

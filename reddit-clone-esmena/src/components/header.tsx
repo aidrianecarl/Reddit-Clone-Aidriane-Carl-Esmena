@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
-import { Menu, Search, MessageCircle, Bell, LogOut, Settings, User, Moon, Sun } from "lucide-react"
+import { Menu, MessageCircle, Bell, LogOut, Settings, User, Moon, Sun, Plus, MoreHorizontal } from "lucide-react"
 import { useAuth } from "@/app/providers"
 import { logoutUser } from "@/lib/auth"
 
@@ -79,16 +79,25 @@ export function Header({ onLoginClick, onSignupClick, onMenuClick }: HeaderProps
         </div>
 
         {/* Center - Search */}
-        <div className="flex-1 max-w-md hidden sm:block">
+        <div className="flex-1 max-w-2xl hidden sm:block">
           <div className="relative group">
-            <Search size={18} className="absolute left-3 top-3 text-gray-500 dark:text-gray-400 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Search Reddit"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-orange-600 transition-all dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-            />
+            <div className="flex items-center bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-full px-4 py-2">
+              <div className="w-5 h-5 rounded-full bg-orange-600 flex items-center justify-center flex-shrink-0">
+                <span className="text-white font-bold text-xs">r</span>
+              </div>
+              <input
+                type="text"
+                placeholder="Find anything"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="flex-1 ml-3 bg-transparent text-sm focus:outline-none dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+              />
+              {!isAuthenticated && (
+                <button className="ml-2 text-gray-900 dark:text-white text-sm font-semibold hover:text-orange-600">
+                  Ask
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -98,15 +107,44 @@ export function Header({ onLoginClick, onSignupClick, onMenuClick }: HeaderProps
             <>
               <button
                 className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg hidden sm:block transition-colors"
+                aria-label="Get App"
+              >
+                <svg
+                  className="w-5 h-5 text-gray-900 dark:text-gray-300"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"
+                  />
+                </svg>
+              </button>
+
+              <button
+                className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg hidden sm:block transition-colors"
                 aria-label="Messages"
               >
                 <MessageCircle size={20} className="text-gray-900 dark:text-gray-300" />
               </button>
+
+              <Link
+                href="/create-post"
+                className="hidden sm:flex items-center gap-1 px-4 py-2 text-gray-900 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg font-semibold text-sm transition-colors"
+              >
+                <Plus size={18} />
+                <span>Create</span>
+              </Link>
+
               <button
-                className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg hidden sm:block transition-colors"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg hidden sm:block transition-colors relative"
                 aria-label="Notifications"
               >
                 <Bell size={20} className="text-gray-900 dark:text-gray-300" />
+                <span className="absolute top-1 right-1 w-2 h-2 bg-orange-600 rounded-full"></span>
               </button>
 
               {/* User Menu */}
@@ -167,22 +205,28 @@ export function Header({ onLoginClick, onSignupClick, onMenuClick }: HeaderProps
                   </div>
                 )}
               </div>
+
+              <button className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
+                <MoreHorizontal size={20} className="text-gray-900 dark:text-gray-300" />
+              </button>
             </>
           ) : (
-            <div className="flex items-center gap-2">
+            <>
+              <button className="px-4 py-2 text-gray-900 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full font-semibold text-sm transition-colors hidden sm:block">
+                Get App
+              </button>
+
               <button
                 onClick={onLoginClick}
-                className="px-4 py-2 text-orange-600 hover:bg-orange-50 dark:hover:bg-slate-800 rounded-full font-semibold text-sm transition-colors dark:text-orange-500"
+                className="px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-full font-semibold text-sm transition-colors"
               >
                 Log In
               </button>
-              <button
-                onClick={onSignupClick}
-                className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-full font-semibold text-sm transition-colors"
-              >
-                Sign Up
+
+              <button className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
+                <MoreHorizontal size={20} className="text-gray-900 dark:text-gray-300" />
               </button>
-            </div>
+            </>
           )}
         </div>
       </div>

@@ -3,10 +3,10 @@
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { loginSchema } from "@/lib/schemas"
+import { loginSchema, type LoginInput } from "@/lib/schemas"
 import { loginUser } from "@/lib/auth"
 import { useAuth } from "@/app/providers"
-import { X } from "lucide-react"
+import { X, Smartphone, Apple, Link2, Mail } from "lucide-react"
 
 interface LoginModalProps {
   isOpen: boolean
@@ -24,11 +24,11 @@ export function LoginModal({ isOpen, onClose, onSwitchToSignup }: LoginModalProp
     handleSubmit,
     formState: { errors },
     reset,
-  } = useForm({
+  } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
   })
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: LoginInput) => {
     setIsLoading(true)
     setError("")
 
@@ -48,66 +48,112 @@ export function LoginModal({ isOpen, onClose, onSwitchToSignup }: LoginModalProp
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-lg p-8 max-w-md w-full mx-auto shadow-2xl relative">
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl relative w-full max-w-md max-h-[90vh] flex flex-col">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 z-10"
           aria-label="Close"
         >
           <X size={24} />
         </button>
 
-        <div className="mb-6">
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Log In</h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            By continuing, you agree to our User Agreement and acknowledge that you understand the Privacy Policy.
-          </p>
-        </div>
+        <div className="overflow-y-auto flex-1">
+          <div className="p-8">
+            <div className="mb-6">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Log In</h1>
+              <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                By continuing, you agree to our{" "}
+                <a href="#" className="text-blue-600 hover:text-blue-700 dark:text-blue-400">
+                  User Agreement
+                </a>{" "}
+                and acknowledge that you understand the{" "}
+                <a href="#" className="text-blue-600 hover:text-blue-700 dark:text-blue-400">
+                  Privacy Policy
+                </a>
+                .
+              </p>
+            </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <input
-              {...register("email")}
-              type="email"
-              placeholder="Email or username"
-              className="w-full px-4 py-2.5 bg-gray-100 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded text-sm focus:outline-none focus:ring-2 focus:ring-orange-600 dark:text-white"
-            />
-            {errors.email && <p className="text-red-500 text-xs mt-1">{String(errors.email.message)}</p>}
+            <div className="space-y-3 mb-6">
+              <button className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 dark:border-slate-700 rounded-full hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
+                <Smartphone size={20} className="text-gray-700 dark:text-gray-300" />
+                <span className="text-sm font-medium text-gray-900 dark:text-white">Continue With Phone Number</span>
+              </button>
+
+              <button className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 dark:border-slate-700 rounded-full hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
+                <Mail size={20} className="text-red-500" />
+                <span className="text-sm font-medium text-gray-900 dark:text-white">Continue with Gmail</span>
+              </button>
+
+              <button className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 dark:border-slate-700 rounded-full hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
+                <Apple size={20} className="text-gray-700 dark:text-gray-300" />
+                <span className="text-sm font-medium text-gray-900 dark:text-white">Continue With Apple</span>
+              </button>
+
+              <button className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 dark:border-slate-700 rounded-full hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
+                <Link2 size={20} className="text-gray-700 dark:text-gray-300" />
+                <span className="text-sm font-medium text-gray-900 dark:text-white">Email me a one-time link</span>
+              </button>
+            </div>
+
+            <div className="flex items-center gap-3 mb-6">
+              <div className="flex-1 border-t border-gray-300 dark:border-slate-700"></div>
+              <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">OR</span>
+              <div className="flex-1 border-t border-gray-300 dark:border-slate-700"></div>
+            </div>
+
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mb-6">
+              <div>
+                <input
+                  {...register("email")}
+                  type="email"
+                  placeholder="Email or username"
+                  className="w-full px-4 py-3 bg-gray-100 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 dark:text-white placeholder:text-gray-500"
+                />
+                {errors.email && <p className="text-red-500 text-xs mt-1">{String(errors.email.message)}</p>}
+              </div>
+
+              <div>
+                <input
+                  {...register("password")}
+                  type="password"
+                  placeholder="Password"
+                  className="w-full px-4 py-3 bg-gray-100 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 dark:text-white placeholder:text-gray-500"
+                />
+                {errors.password && <p className="text-red-500 text-xs mt-1">{String(errors.password.message)}</p>}
+              </div>
+
+              {error && <p className="text-red-500 text-sm bg-red-50 dark:bg-red-900/20 p-2 rounded">{error}</p>}
+
+              <div className="text-right">
+                <a href="#" className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400">
+                  Forgot password?
+                </a>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white py-3 rounded-full font-semibold text-sm transition-colors disabled:opacity-50"
+              >
+                {isLoading ? "Logging in..." : "Log In"}
+              </button>
+            </form>
+
+            <div className="text-center text-sm text-gray-600 dark:text-gray-400">
+              New to Reddit?{" "}
+              <button
+                onClick={() => {
+                  onSwitchToSignup()
+                  reset()
+                  setError("")
+                }}
+                className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-semibold"
+              >
+                Sign Up
+              </button>
+            </div>
           </div>
-
-          <div>
-            <input
-              {...register("password")}
-              type="password"
-              placeholder="Password"
-              className="w-full px-4 py-2.5 bg-gray-100 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded text-sm focus:outline-none focus:ring-2 focus:ring-orange-600 dark:text-white"
-            />
-            {errors.password && <p className="text-red-500 text-xs mt-1">{String(errors.password.message)}</p>}
-          </div>
-
-          {error && <p className="text-red-500 text-sm bg-red-50 dark:bg-red-900/20 p-2 rounded">{error}</p>}
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full bg-orange-600 hover:bg-orange-700 text-white py-2.5 rounded font-semibold text-sm transition-colors disabled:opacity-50"
-          >
-            {isLoading ? "Logging in..." : "Log In"}
-          </button>
-        </form>
-
-        <div className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
-          New to Reddit?{" "}
-          <button
-            onClick={() => {
-              onSwitchToSignup()
-              reset()
-              setError("")
-            }}
-            className="text-orange-600 hover:text-orange-700 dark:text-orange-500 dark:hover:text-orange-400 font-semibold"
-          >
-            Sign Up
-          </button>
         </div>
       </div>
     </div>

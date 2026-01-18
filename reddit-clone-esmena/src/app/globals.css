@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "tw-animate-css";
+/* @import "tw-animate-css"; */
 
 @custom-variant dark (&:is(.dark *));
 
@@ -122,5 +122,52 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Add custom scrollbar styling that only shows on hover */
+@layer utilities {
+  /* Hide scrollbar by default */
+  .scrollbar-hide {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+  }
+
+  /* Show scrollbar on hover */
+  .hover\:scrollbar-show:hover {
+    -ms-overflow-style: auto;
+    scrollbar-width: thin;
+  }
+
+  .hover\:scrollbar-show:hover::-webkit-scrollbar {
+    display: block;
+    width: 8px;
+  }
+
+  .hover\:scrollbar-show:hover::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .hover\:scrollbar-show:hover::-webkit-scrollbar-thumb {
+    background-color: rgb(249, 115, 22); /* orange-500 */
+    border-radius: 4px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+
+  .hover\:scrollbar-show:hover::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(234, 88, 12); /* orange-600 */
+  }
+
+  .dark .hover\:scrollbar-show:hover::-webkit-scrollbar-thumb {
+    background-color: rgb(249, 115, 22); /* orange-500 */
+  }
+
+  .dark .hover\:scrollbar-show:hover::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(234, 88, 12); /* orange-600 */
   }
 }
