@@ -4,6 +4,7 @@ import Link from "next/link"
 import { Home, Compass, Users, Plus, ChevronDown, Gamepad2, Zap, ChevronLeft, ChevronRight } from "lucide-react"
 import { useEffect, useState } from "react"
 import { getAllSubreddits } from "@/lib/subreddit"
+import { CreateSubredditModal } from "./create-subreddit-modal"
 
 interface SidebarProps {
   isOpen: boolean
@@ -18,6 +19,7 @@ export function Sidebar({ isOpen, onClose, isAuthenticated }: SidebarProps) {
   const [expandGames, setExpandGames] = useState(true)
   const [expandResources, setExpandResources] = useState(true)
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 
   useEffect(() => {
     const fetchSubreddits = async () => {
@@ -37,6 +39,8 @@ export function Sidebar({ isOpen, onClose, isAuthenticated }: SidebarProps) {
 
   return (
     <>
+      <CreateSubredditModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
+
       {/* Overlay */}
       {isOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={onClose} aria-hidden="true" />}
 
@@ -51,7 +55,7 @@ export function Sidebar({ isOpen, onClose, isAuthenticated }: SidebarProps) {
       >
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="hidden lg:flex absolute -right-[22px] top-4 w-15 h-10 bg-white dark:bg-slate-900 rounded-full shadow-lg items-center justify-center border border-gray-200 dark:border-slate-800 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors z-40 absolute"
+          className="hidden lg:flex absolute -right-[22px] top-4 w-10 h-10 bg-white dark:bg-slate-900 rounded-full shadow-lg items-center justify-center border border-gray-200 dark:border-slate-800 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors z-50 sticky"
           title={isCollapsed ? "Expand Navigation" : "Collapse Navigation"}
         >
           {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
@@ -106,14 +110,16 @@ export function Sidebar({ isOpen, onClose, isAuthenticated }: SidebarProps) {
             <>
               {/* Create Community */}
               <div className="border-t border-gray-200 dark:border-slate-800 pt-4">
-                <Link
-                  href="/create-subreddit"
-                  onClick={onClose}
-                  className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-orange-50 dark:hover:bg-orange-900/20 text-orange-600 dark:text-orange-500 font-medium transition-colors"
+                <button
+                  onClick={() => {
+                    setIsCreateModalOpen(true)
+                    onClose()
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-orange-50 dark:hover:bg-orange-900/20 text-orange-600 dark:text-orange-500 font-medium transition-colors"
                 >
                   <Plus size={20} className="flex-shrink-0" />
                   {!isCollapsed && <span>Create Community</span>}
-                </Link>
+                </button>
               </div>
 
               {/* Communities List */}

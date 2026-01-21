@@ -98,45 +98,37 @@ export default function SubredditPage() {
 
         <main className="flex-1 max-w-3xl mx-auto px-4 py-6">
           {/* Subreddit Header */}
-          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mb-6">
-            <div className="h-32 bg-gradient-to-r from-purple-400 to-blue-400" />
-            <div className="px-6 pb-6">
-              <div className="flex items-end justify-between mb-4 -mt-10">
+          <div className="bg-white rounded-lg overflow-hidden mb-6">
+            <div className="h-40 bg-gradient-to-r from-gray-300 to-gray-400 flex items-center justify-center relative">
+              <div className="w-32 h-32 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white text-6xl font-bold shadow-lg">
+                {subreddit.name?.charAt(0).toUpperCase()}
+              </div>
+              <button className="absolute top-4 right-4 w-10 h-10 bg-gray-700 hover:bg-gray-800 rounded-full flex items-center justify-center text-white">
+                ✎
+              </button>
+            </div>
+            <div className="px-6 pb-6 pt-4">
+              <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h1 className="text-3xl font-bold text-gray-900">r/{subreddit.name}</h1>
+                  <h1 className="text-4xl font-bold text-gray-900">r/{subreddit.name}</h1>
                   <p className="text-gray-600 mt-2">{subreddit.description || "A community"}</p>
                 </div>
-                <button className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-semibold">
-                  Join
-                </button>
-              </div>
-              <div className="flex gap-8 text-sm text-gray-600 border-t pt-4">
-                <div>
-                  <p className="font-semibold text-gray-900">{subreddit.memberCount}</p>
-                  <p>Members</p>
-                </div>
-                <div>
-                  <p className="font-semibold text-gray-900">{new Date(subreddit.createdAt).toLocaleDateString()}</p>
-                  <p>Created</p>
+                <div className="flex gap-2">
+                  <Link href={`/r/${subreddit.name}/submit`} className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-semibold">
+                    + Create Post
+                  </Link>
+                  <button className="px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-full font-semibold">
+                    Mod Tools
+                  </button>
+                  <button className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center">
+                    ⋯
+                  </button>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Create Post */}
-          {isAuthenticated && (
-            <div className="bg-white border border-gray-200 rounded-lg p-4 flex gap-3 mb-6">
-              <div className="w-10 h-10 rounded-full bg-teal-500 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
-                {userProfile?.username?.[0]?.toUpperCase() || "U"}
-              </div>
-              <Link
-                href={`/r/${subreddit.name}/submit`}
-                className="flex-1 text-left text-gray-600 bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-full transition-colors"
-              >
-                Create a post
-              </Link>
-            </div>
-          )}
+
 
           {/* Sort Options */}
           <div className="mb-4 flex gap-2">
@@ -158,9 +150,12 @@ export default function SubredditPage() {
 
           {/* Posts Feed */}
           {posts.length === 0 ? (
-            <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">No posts yet</h2>
-              <p className="text-gray-600">Be the first to post in r/{subreddit.name}!</p>
+            <div className="bg-white rounded-lg p-8 text-center">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">This community doesn't have any posts yet</h2>
+              <p className="text-gray-600 mb-6">Make one and get this feed started.</p>
+              <button className="px-8 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-full font-semibold">
+                Create Post
+              </button>
             </div>
           ) : (
             <div className="space-y-4">
@@ -182,24 +177,38 @@ export default function SubredditPage() {
 
         {/* Right Sidebar */}
         <aside className="w-80 pl-4 py-6 hidden xl:block">
-          <div className="sticky top-20 bg-white border border-gray-200 rounded-lg p-4">
-            <h3 className="font-bold text-gray-900 mb-4">About r/{subreddit.name}</h3>
-            <div className="space-y-4 text-sm text-gray-600">
-              <div>
-                <p className="font-semibold text-gray-900">{subreddit.memberCount}</p>
-                <p>Members</p>
-              </div>
-              <div>
-                <p className="font-semibold text-gray-900">
-                  Created {new Date(subreddit.createdAt).toLocaleDateString()}
-                </p>
-              </div>
-              {subreddit.description && (
-                <div>
-                  <p className="font-semibold text-gray-900 mb-2">Description</p>
-                  <p>{subreddit.description}</p>
+          <div className="sticky top-20 bg-white rounded-lg p-6 space-y-6">
+            <div>
+              <h3 className="font-bold text-gray-900 mb-4">Build your community</h3>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-lg">
+                  <span className="text-2xl">🏆</span>
+                  <div className="text-sm">
+                    <p className="font-semibold text-white">Finish setting up</p>
+                    <p className="text-yellow-100 text-xs">1/3 achievements unlocked</p>
+                  </div>
                 </div>
-              )}
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <p className="font-semibold text-gray-900 text-sm mb-2">Create a welcome post</p>
+                  <button className="w-full px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-900 text-sm font-semibold rounded-lg">
+                    Create
+                  </button>
+                </div>
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <p className="font-semibold text-gray-900 text-sm mb-2">Highlight your welcome post</p>
+                  <p className="text-gray-600 text-xs">
+                    Make the post new members see first
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-gray-200 pt-6">
+              <p className="text-sm text-gray-600 mb-4">
+                <Link href="#" className="text-blue-600 hover:underline">
+                  Join r/NewMods
+                </Link>
+              </p>
             </div>
           </div>
         </aside>

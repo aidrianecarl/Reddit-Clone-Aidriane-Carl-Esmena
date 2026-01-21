@@ -5,6 +5,8 @@ import { useParams } from "next/navigation"
 import { Header } from "@/components/header"
 import { Sidebar } from "@/components/sidebar"
 import { AuthModal } from "@/components/auth-modal"
+
+// The AuthModal is a wrapper that manages both Login and Signup modals
 import { CommentForm } from "@/components/comment-form"
 import { CommentThread } from "@/components/comment-thread"
 import { getPostById, enrichPost } from "@/lib/post"

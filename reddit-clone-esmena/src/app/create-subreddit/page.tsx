@@ -9,7 +9,7 @@ import { createSubreddit } from "@/lib/subreddit"
 import { useAuth } from "@/app/providers"
 import { Header } from "@/components/header"
 import { Sidebar } from "@/components/sidebar"
-import { AuthModal } from "@/components/auth-modal"
+import { AuthModal } from "@/components/auth-modal" // Import AuthModal
 
 export default function CreateSubreddit() {
   const router = useRouter()
@@ -17,7 +17,7 @@ export default function CreateSubreddit() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false) // Declare isAuthModalOpen
 
   const {
     register,
@@ -49,29 +49,22 @@ export default function CreateSubreddit() {
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-white">
-        <Header onAuthClick={() => setIsAuthModalOpen(true)} onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
+        <Header onAuthClick={() => {}} onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
         <div className="flex">
           <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} isAuthenticated={false} />
           <main className="flex-1 flex items-center justify-center min-h-screen">
             <div className="text-center">
               <p className="text-gray-600 mb-6">You must be logged in to create a community</p>
-              <button
-                onClick={() => setIsAuthModalOpen(true)}
-                className="px-8 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-semibold"
-              >
-                Log In
-              </button>
             </div>
           </main>
         </div>
-        <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
       </div>
     )
   }
 
   return (
     <div className="min-h-screen bg-white">
-      <Header onAuthClick={() => setIsAuthModalOpen(true)} onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
+      <Header onAuthClick={() => {}} onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
 
       <div className="flex">
         <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} isAuthenticated={isAuthenticated} />
@@ -131,8 +124,6 @@ export default function CreateSubreddit() {
           </div>
         </main>
       </div>
-
-      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     </div>
   )
 }

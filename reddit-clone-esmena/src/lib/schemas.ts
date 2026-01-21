@@ -27,6 +27,9 @@ export const createSubredditSchema = z.object({
   description: z.string().max(500, "Description must be at most 500 characters").optional(),
 })
 
+export const subredditPrivacySchema = z.enum(['public', 'restricted', 'private'])
+export const subredditTopicSchema = z.string()
+
 export const createPostSchema = z.object({
   title: z.string().min(1, "Title is required").max(300, "Title must be at most 300 characters"),
   content: z.string().max(10000, "Content must be at most 10000 characters").optional(),

@@ -1,16 +1,22 @@
 import { databases, DATABASE_ID, SUBREDDITS_COLLECTION } from "./appwrite"
 import { Query, ID } from "appwrite"
 
-export async function createSubreddit(name: string, description: string, creatorId: string) {
+export async function createSubreddit(
+  name: string,
+  description: string,
+  creatorId: string,
+  privacyType: 'public' | 'restricted' | 'private' = 'public',
+  topic: string = ''
+) {
   try {
     const subreddit = await databases.createDocument(DATABASE_ID, SUBREDDITS_COLLECTION, ID.unique(), {
       name: name.toLowerCase(),
       description: description || "",
       creatorId,
       memberCount: 1,
-      isPublic: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      isPublic: privacyType === 'public',
+      privacyType: privacyType,
+      topic: topic,
     })
     return subreddit
   } catch (error: any) {
