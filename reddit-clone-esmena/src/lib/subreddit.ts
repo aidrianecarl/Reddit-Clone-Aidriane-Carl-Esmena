@@ -75,3 +75,16 @@ export async function leaveSubreddit(subredditId: string) {
     return false
   }
 }
+
+export async function getUserSubreddits(userId: string) {
+  try {
+    const response = await databases.listDocuments(DATABASE_ID, SUBREDDITS_COLLECTION, [
+      Query.equal("creatorId", userId),
+      Query.orderDesc("$createdAt"),
+    ])
+    return response.documents || []
+  } catch (error) {
+    console.error("Failed to fetch user subreddits:", error)
+    return []
+  }
+}

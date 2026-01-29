@@ -1,25 +1,29 @@
 import { databases, DATABASE_ID, POSTS_COLLECTION, USERS_COLLECTION } from "./appwrite"
 import { Query, ID } from "appwrite"
 
-export async function createPost(
-  title: string,
-  content: string,
-  imageUrl: string,
-  subredditId: string,
-  authorId: string,
-) {
+interface CreatePostParams {
+  title: string
+  content: string
+  imageUrl?: string
+  subredditId?: string | null
+  authorId: string
+  postType?: string
+}
+
+export async function createPost(params: CreatePostParams) {
   try {
+    const { title, content, imageUrl = "", subredditId, authorId, postType = "text" } = params
+    
     const post = await databases.createDocument(DATABASE_ID, POSTS_COLLECTION, ID.unique(), {
       title,
       content: content || "",
       imageUrl: imageUrl || "",
-      authorId,
-      subredditId,
+      users: authorId,
+      subreddits: subredditId || "",
       upvotes: 0,
       downvotes: 0,
       commentCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      postType,
     })
     return post
   } catch (error: any) {
@@ -39,11 +43,11 @@ export async function getPostById(postId: string) {
 
 export async function getPostsBySubreddit(subredditId: string, limit = 20, offset = 0, sortBy = "newest") {
   try {
-    const queries = [Query.equal("subredditId", subredditId), Query.limit(limit), Query.offset(offset)]
+    const queries = [Query.equal("subreddits", subredditId), Query.limit(limit), Query.offset(offset)]
 
     try {
       if (sortBy === "newest") {
-        queries.push(Query.orderDesc("createdAt"))
+        queries.push(Query.orderDesc("$createdAt"))
       } else if (sortBy === "top") {
         queries.push(Query.orderDesc("upvotes"))
       } else if (sortBy === "hot") {
@@ -68,7 +72,7 @@ export async function getHomeFeed(limit = 20, offset = 0, sortBy = "newest") {
 
     try {
       if (sortBy === "newest") {
-        queries.push(Query.orderDesc("createdAt"))
+        queries.push(Query.orderDesc("$createdAt"))
       } else if (sortBy === "top") {
         queries.push(Query.orderDesc("upvotes"))
       } else if (sortBy === "hot") {
@@ -89,10 +93,10 @@ export async function getHomeFeed(limit = 20, offset = 0, sortBy = "newest") {
 
 export async function getPostsByAuthor(authorId: string, limit = 20, offset = 0) {
   try {
-    const queries = [Query.equal("authorId", authorId), Query.limit(limit), Query.offset(offset)]
+    const queries = [Query.equal("users", authorId), Query.limit(limit), Query.offset(offset)]
 
     try {
-      queries.push(Query.orderDesc("createdAt"))
+      queries.push(Query.orderDesc("$createdAt"))
     } catch (orderError) {
       console.warn("Could not apply sort order:", orderError)
     }
@@ -118,7 +122,7 @@ export async function updatePostCommentCount(postId: string, count: number) {
 
 export async function enrichPost(post: any) {
   try {
-    const author = await databases.listDocuments(DATABASE_ID, USERS_COLLECTION, [Query.equal("userId", post.authorId)])
+    const author = await databases.listDocuments(DATABASE_ID, USERS_COLLECTION, [Query.equal("userId", post.users)])
     return {
       ...post,
       author: author.documents[0] || null,

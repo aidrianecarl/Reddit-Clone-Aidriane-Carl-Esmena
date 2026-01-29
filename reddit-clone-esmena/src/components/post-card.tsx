@@ -36,8 +36,8 @@ export function PostCard({ post }: PostCardProps) {
     setIsVoting(true)
     try {
       const result = await voteOnPost(user.$id, post.$id, "upvote")
-      setUpvoteCount(result.upvotes)
-      setDownvoteCount(result.downvotes)
+      setUpvoteCount(result.upvotes || 0)
+      setDownvoteCount(result.downvotes || 0)
       setUserVote(userVote === "upvote" ? null : "upvote")
     } finally {
       setIsVoting(false)
@@ -50,15 +50,15 @@ export function PostCard({ post }: PostCardProps) {
     setIsVoting(true)
     try {
       const result = await voteOnPost(user.$id, post.$id, "downvote")
-      setUpvoteCount(result.upvotes)
-      setDownvoteCount(result.downvotes)
+      setUpvoteCount(result.upvotes || 0)
+      setDownvoteCount(result.downvotes || 0)
       setUserVote(userVote === "downvote" ? null : "downvote")
     } finally {
       setIsVoting(false)
     }
   }
 
-  const netVotes = upvoteCount - downvoteCount
+  const netVotes = (post.upvotes || 0) - (post.downvotes || 0)
 
   return (
     <article className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:border-gray-300 transition-colors">
@@ -90,11 +90,11 @@ export function PostCard({ post }: PostCardProps) {
         <div className="flex-1 p-4">
           {/* Header */}
           <div className="flex items-center gap-2 text-xs text-gray-600 mb-2">
-            <span className="font-semibold text-gray-900">{post.author?.username || "Unknown"}</span>
+            <span className="font-semibold text-gray-900">{post.author?.name || "Unknown"}</span>
             <span>•</span>
             <span>
-              {post.createdAt
-                ? new Date(post.createdAt).toLocaleDateString(undefined, {
+              {post.$createdAt
+                ? new Date(post.$createdAt).toLocaleDateString(undefined, {
                     month: "short",
                     day: "numeric",
                   })

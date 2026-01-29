@@ -6,6 +6,7 @@ import { Sidebar } from "@/components/sidebar"
 import { LoginModal } from "@/components/login-modal"
 import { SignupModal } from "@/components/signup-modal"
 import { PostCard } from "@/components/post-card"
+import { PostSkeleton } from "@/components/post-skeleton"
 import { SortButtons } from "@/components/sort-buttons"
 import { useAuth } from "@/app/providers"
 import { getHomeFeed, enrichPosts } from "@/lib/post"
@@ -96,7 +97,7 @@ export default function Home() {
                   {userProfile?.name?.[0]?.toUpperCase() || "U"}
                 </div>
                 <Link
-                  href="/create-post"
+                  href="/r/popular/submit?type=TEXT"
                   className="flex-1 text-left text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 px-4 py-2 rounded-full transition-colors text-sm"
                 >
                   Create a post
@@ -109,11 +110,10 @@ export default function Home() {
 
             {/* Feed */}
             {isLoading ? (
-              <div className="text-center py-12">
-                <div className="inline-block">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
-                </div>
-                <p className="text-gray-500 dark:text-gray-400 mt-4">Loading posts...</p>
+              <div className="space-y-4">
+                {[...Array(5)].map((_, i) => (
+                  <PostSkeleton key={i} />
+                ))}
               </div>
             ) : posts.length === 0 ? (
               <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg p-8 text-center shadow-sm">

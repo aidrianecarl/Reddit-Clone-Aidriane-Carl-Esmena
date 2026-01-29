@@ -114,7 +114,7 @@ export default function SubredditPage() {
                   <p className="text-gray-600 mt-2">{subreddit.description || "A community"}</p>
                 </div>
                 <div className="flex gap-2">
-                  <Link href={`/r/${subreddit.name}/submit`} className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-semibold">
+                  <Link href={`/r/${subreddit.name}/submit?type=TEXT`} className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-semibold">
                     + Create Post
                   </Link>
                   <button className="px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-full font-semibold">

@@ -132,7 +132,7 @@ export function Header({ onLoginClick, onSignupClick, onMenuClick }: HeaderProps
               </button>
 
               <Link
-                href="/create-post"
+                href="/submit"
                 className="hidden sm:flex items-center gap-1 px-4 py-2 text-gray-900 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg font-semibold text-sm transition-colors"
               >
                 <Plus size={18} />
