@@ -34,6 +34,8 @@ export const createPostSchema = z.object({
   title: z.string().min(1, "Title is required").max(300, "Title must be at most 300 characters"),
   content: z.string().max(10000, "Content must be at most 10000 characters").optional(),
   imageUrl: z.string().optional(),
+  subreddits: z.string().min(1, "Please select a community"),
+  postType: z.enum(["text", "image", "link"]).optional().default("text"),
 })
 
 export const createCommentSchema = z.object({
@@ -45,3 +47,5 @@ export type SignupInput = z.infer<typeof signupSchema>
 export type CreateSubredditInput = z.infer<typeof createSubredditSchema>
 export type CreatePostInput = z.infer<typeof createPostSchema>
 export type CreateCommentInput = z.infer<typeof createCommentSchema>
+
+export const subredditTypeSchema = z.enum(['public', 'restricted', 'private']).default('public')

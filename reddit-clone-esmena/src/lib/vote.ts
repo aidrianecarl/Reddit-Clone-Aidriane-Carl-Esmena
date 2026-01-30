@@ -3,6 +3,10 @@ import { Query, ID } from "appwrite"
 
 export async function voteOnPost(userId: string, postId: string, voteType: "upvote" | "downvote") {
   try {
+    if (!userId || !postId) {
+      throw new Error("User ID and Post ID are required")
+    }
+
     // Check if user has already voted
     const existingVote = await databases.listDocuments(DATABASE_ID, VOTES_COLLECTION, [
       Query.equal("userId", userId),
@@ -47,7 +51,6 @@ export async function voteOnPost(userId: string, postId: string, voteType: "upvo
         targetId: postId,
         targetType: "post",
         voteType,
-        createdAt: new Date().toISOString(),
       })
 
       if (voteType === "upvote") {
@@ -61,7 +64,6 @@ export async function voteOnPost(userId: string, postId: string, voteType: "upvo
     await databases.updateDocument(DATABASE_ID, POSTS_COLLECTION, postId, {
       upvotes: newUpvotes,
       downvotes: newDownvotes,
-      updatedAt: new Date().toISOString(),
     })
 
     return { upvotes: newUpvotes, downvotes: newDownvotes }
@@ -73,6 +75,10 @@ export async function voteOnPost(userId: string, postId: string, voteType: "upvo
 
 export async function voteOnComment(userId: string, commentId: string, voteType: "upvote" | "downvote") {
   try {
+    if (!userId || !commentId) {
+      throw new Error("User ID and Comment ID are required")
+    }
+
     // Check if user has already voted
     const existingVote = await databases.listDocuments(DATABASE_ID, VOTES_COLLECTION, [
       Query.equal("userId", userId),
@@ -114,7 +120,6 @@ export async function voteOnComment(userId: string, commentId: string, voteType:
         targetId: commentId,
         targetType: "comment",
         voteType,
-        createdAt: new Date().toISOString(),
       })
 
       if (voteType === "upvote") {
@@ -128,7 +133,6 @@ export async function voteOnComment(userId: string, commentId: string, voteType:
     await databases.updateDocument(DATABASE_ID, COMMENTS_COLLECTION, commentId, {
       upvotes: newUpvotes,
       downvotes: newDownvotes,
-      updatedAt: new Date().toISOString(),
     })
 
     return { upvotes: newUpvotes, downvotes: newDownvotes }
@@ -140,6 +144,10 @@ export async function voteOnComment(userId: string, commentId: string, voteType:
 
 export async function getUserVote(userId: string, targetId: string, targetType: "post" | "comment") {
   try {
+    if (!userId || !targetId) {
+      return null
+    }
+
     const votes = await databases.listDocuments(DATABASE_ID, VOTES_COLLECTION, [
       Query.equal("userId", userId),
       Query.equal("targetId", targetId),

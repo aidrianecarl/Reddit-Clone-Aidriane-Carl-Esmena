@@ -4,26 +4,12 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import {
-  ChevronDown,
-  Bold,
-  Italic,
-  Strikethrough,
-  Code,
-  LinkIcon,
-  ImageIcon,
-  Smile,
-  List,
-  ListOrdered,
-  Quote,
-  SeparatorVertical as Separator,
-  Code2,
-  Keyboard,
-  MoreHorizontal,
-} from "lucide-react"
+import { ChevronDown, Bold, Italic, Strikethrough, Code, LinkIcon, ImageIcon, Smile, List, ListOrdered, Quote, SeparatorVertical as Separator, Code2, Keyboard, MoreHorizontal, X } from "lucide-react"
 import { useAuth } from "@/app/providers"
 import { createPost } from "@/lib/post"
 import { getAllSubreddits } from "@/lib/subreddit"
+import { createPostSchema } from "@/lib/schemas"
+import { ZodError } from "zod"
 
 export default function CreatePostPage() {
   const router = useRouter()
@@ -31,11 +17,15 @@ export default function CreatePostPage() {
   const [title, setTitle] = useState("")
   const [content, setContent] = useState("")
   const [selectedCommunity, setSelectedCommunity] = useState("")
+  const [imageUrl, setImageUrl] = useState("")
+  const [previewImage, setPreviewImage] = useState<string | null>(null)
   const [subreddits, setSubreddits] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [showCommunityDropdown, setShowCommunityDropdown] = useState(false)
   const [activeTab, setActiveTab] = useState<"text" | "images" | "link" | "poll">("text")
   const [error, setError] = useState("")
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -46,46 +36,97 @@ export default function CreatePostPage() {
     const fetchSubreddits = async () => {
       try {
         const response = await getAllSubreddits(100)
-        if (response.documents) {
+        if (response.documents && response.documents.length > 0) {
           setSubreddits(response.documents)
-          if (response.documents.length > 0) {
-            setSelectedCommunity(response.documents[0].$id)
-          }
+          setSelectedCommunity(response.documents[0].$id)
         }
       } catch (error) {
         console.error("Failed to fetch subreddits:", error)
+        setError("Failed to load communities")
       }
     }
 
     fetchSubreddits()
   }, [isAuthenticated, router])
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setIsUploadingImage(true)
+    setError("")
+
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Upload failed")
+      }
+
+      const data = await response.json()
+      setImageUrl(data.fileUrl)
+      setPreviewImage(data.fileUrl)
+    } catch (error: any) {
+      setError(error.message || "Failed to upload image")
+      console.error("Upload error:", error)
+    } finally {
+      setIsUploadingImage(false)
+    }
+  }
+
   const handleCreatePost = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    if (!title.trim()) {
-      setError("Title is required")
-      return
-    }
-
-    if (!selectedCommunity) {
-      setError("Please select a community")
-      return
-    }
+    setError("")
+    setValidationErrors({})
 
     if (!user?.$id) {
       setError("User ID not found")
       return
     }
 
-    setIsLoading(true)
-    setError("")
-
     try {
-      await createPost(title, content, "", selectedCommunity, user.$id)
-      router.push(`/r/${subreddits.find((s) => s.$id === selectedCommunity)?.name}`)
+      const postType = activeTab === "images" ? "image" : activeTab === "link" ? "link" : "text"
+      
+      const validatedData = createPostSchema.parse({
+        title,
+        content: content || undefined,
+        imageUrl: imageUrl || undefined,
+        subreddits: selectedCommunity,
+        postType,
+      })
+
+      setIsLoading(true)
+
+      await createPost({
+        title: validatedData.title,
+        content: validatedData.content,
+        imageUrl: validatedData.imageUrl,
+        subredditId: validatedData.subreddits,
+        authorId: user.$id,
+        postType: validatedData.postType,
+      })
+
+      const subredditName = subreddits.find((s) => s.$id === selectedCommunity)?.name
+      router.push(`/r/${subredditName}`)
     } catch (error: any) {
-      setError(error.message || "Failed to create post")
+      if (error instanceof ZodError) {
+        const errors: Record<string, string> = {}
+        error.errors.forEach((err) => {
+          const path = err.path.join(".")
+          errors[path] = err.message
+        })
+        setValidationErrors(errors)
+        setError("Please check the form for errors")
+      } else {
+        setError(error.message || "Failed to create post")
+      }
       console.error("Create post error:", error)
     } finally {
       setIsLoading(false)
@@ -108,14 +149,23 @@ export default function CreatePostPage() {
 
       {/* Community Selector */}
       <div className="mb-6 relative">
+        <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+          Select a community
+          <span className="text-red-500 ml-1">*</span>
+        </label>
         <button
+          type="button"
           onClick={() => setShowCommunityDropdown(!showCommunityDropdown)}
-          className="flex items-center gap-2 px-4 py-2 rounded-full bg-gray-200 dark:bg-slate-700 text-gray-900 dark:text-white font-semibold hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors"
+          className={`w-full flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 dark:bg-slate-800 text-gray-900 dark:text-white font-semibold hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors border ${
+            validationErrors.subredditId
+              ? "border-red-500"
+              : "border-gray-200 dark:border-slate-700"
+          }`}
         >
           <div className="w-6 h-6 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
             {selectedCommunity ? subreddits.find((s) => s.$id === selectedCommunity)?.name[0].toUpperCase() : "r"}
           </div>
-          <span>
+          <span className="flex-1 text-left">
             {selectedCommunity
               ? `r/${subreddits.find((s) => s.$id === selectedCommunity)?.name}`
               : "Select a community"}
@@ -123,26 +173,38 @@ export default function CreatePostPage() {
           <ChevronDown size={18} />
         </button>
 
+        {validationErrors.subredditId && (
+          <p className="text-red-500 text-sm mt-1">{validationErrors.subredditId}</p>
+        )}
+
         {showCommunityDropdown && (
-          <div className="absolute top-full left-0 mt-2 w-64 bg-white dark:bg-slate-900 rounded-lg shadow-lg border border-gray-200 dark:border-slate-800 z-50 max-h-64 overflow-y-auto">
-            {subreddits.map((sr) => (
-              <button
-                key={sr.$id}
-                onClick={() => {
-                  setSelectedCommunity(sr.$id)
-                  setShowCommunityDropdown(false)
-                }}
-                className="w-full text-left px-4 py-3 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-3 border-b border-gray-100 dark:border-slate-800 last:border-0"
-              >
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                  {sr.name[0].toUpperCase()}
-                </div>
-                <div>
-                  <p className="font-semibold text-gray-900 dark:text-white text-sm">r/{sr.name}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{sr.membersCount || 0} members</p>
-                </div>
-              </button>
-            ))}
+          <div className="absolute top-full left-0 mt-2 w-full bg-white dark:bg-slate-900 rounded-lg shadow-lg border border-gray-200 dark:border-slate-800 z-50 max-h-64 overflow-y-auto">
+            {subreddits.length > 0 ? (
+              subreddits.map((sr) => (
+                <button
+                  key={sr.$id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedCommunity(sr.$id)
+                    setShowCommunityDropdown(false)
+                    setValidationErrors({ ...validationErrors, subredditId: "" })
+                  }}
+                  className="w-full text-left px-4 py-3 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-3 border-b border-gray-100 dark:border-slate-800 last:border-0"
+                >
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                    {sr.name[0].toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900 dark:text-white text-sm">r/{sr.name}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{sr.membersCount || 0} members</p>
+                  </div>
+                </button>
+              ))
+            ) : (
+              <div className="px-4 py-3 text-gray-500 dark:text-gray-400 text-sm">
+                No communities found
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -189,171 +251,148 @@ export default function CreatePostPage() {
           >
             Link
           </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("poll")}
-            className={`pb-3 font-semibold text-sm transition-colors ${
-              activeTab === "poll"
-                ? "text-blue-600 dark:text-blue-500 border-b-2 border-blue-600 dark:border-blue-500"
-                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-            }`}
-          >
-            Poll
-          </button>
         </div>
 
         {/* Title Input */}
         <div>
+          <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+            Title <span className="text-red-500">*</span>
+          </label>
           <input
             type="text"
-            placeholder="Title"
+            placeholder="Enter post title"
             maxLength={300}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full px-4 py-3 bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-500 transition-all"
+            className={`w-full px-4 py-3 bg-gray-100 dark:bg-slate-800 border rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-500 transition-all ${
+              validationErrors.title ? "border-red-500" : "border-gray-200 dark:border-slate-700"
+            }`}
           />
+          {validationErrors.title && <p className="text-red-500 text-sm mt-1">{validationErrors.title}</p>}
           <div className="text-right text-xs text-gray-500 dark:text-gray-400 mt-1">{title.length}/300</div>
         </div>
 
-        {/* Add Tags */}
-        <div>
-          <button
-            type="button"
-            className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-          >
-            Add tags
-          </button>
-        </div>
-
-        {/* Body Text Editor */}
-        <div className="border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden">
-          {/* Toolbar */}
-          <div className="bg-gray-100 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 p-3 flex items-center gap-1 overflow-x-auto">
-            <button
-              type="button"
-              className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded transition-colors"
-              title="Bold"
-            >
-              <Bold size={18} className="text-gray-600 dark:text-gray-400" />
-            </button>
-            <button
-              type="button"
-              className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded transition-colors"
-              title="Italic"
-            >
-              <Italic size={18} className="text-gray-600 dark:text-gray-400" />
-            </button>
-            <button
-              type="button"
-              className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded transition-colors"
-              title="Strikethrough"
-            >
-              <Strikethrough size={18} className="text-gray-600 dark:text-gray-400" />
-            </button>
-            <div className="w-px h-6 bg-gray-300 dark:bg-slate-700 mx-1"></div>
-            <button
-              type="button"
-              className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded transition-colors"
-              title="Code"
-            >
-              <Code size={18} className="text-gray-600 dark:text-gray-400" />
-            </button>
-            <button
-              type="button"
-              className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded transition-colors"
-              title="Link"
-            >
-              <LinkIcon size={18} className="text-gray-600 dark:text-gray-400" />
-            </button>
-            <button
-              type="button"
-              className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded transition-colors"
-              title="Image"
-            >
-              <ImageIcon size={18} className="text-gray-600 dark:text-gray-400" />
-            </button>
-            <button
-              type="button"
-              className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded transition-colors"
-              title="Emoji"
-            >
-              <Smile size={18} className="text-gray-600 dark:text-gray-400" />
-            </button>
-            <div className="w-px h-6 bg-gray-300 dark:bg-slate-700 mx-1"></div>
-            <button
-              type="button"
-              className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded transition-colors"
-              title="Bullet List"
-            >
-              <List size={18} className="text-gray-600 dark:text-gray-400" />
-            </button>
-            <button
-              type="button"
-              className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded transition-colors"
-              title="Numbered List"
-            >
-              <ListOrdered size={18} className="text-gray-600 dark:text-gray-400" />
-            </button>
-            <button
-              type="button"
-              className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded transition-colors"
-              title="Quote"
-            >
-              <Quote size={18} className="text-gray-600 dark:text-gray-400" />
-            </button>
-            <button
-              type="button"
-              className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded transition-colors"
-              title="Code Block"
-            >
-              <Code2 size={18} className="text-gray-600 dark:text-gray-400" />
-            </button>
-            <button
-              type="button"
-              className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded transition-colors"
-              title="Keyboard"
-            >
-              <Keyboard size={18} className="text-gray-600 dark:text-gray-400" />
-            </button>
-            <button
-              type="button"
-              className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded transition-colors"
-              title="Separator"
-            >
-              <Separator size={18} className="text-gray-600 dark:text-gray-400" />
-            </button>
-            <div className="flex-1"></div>
-            <button
-              type="button"
-              className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded transition-colors"
-              title="More"
-            >
-              <MoreHorizontal size={18} className="text-gray-600 dark:text-gray-400" />
-            </button>
+        {/* Content or Image based on tab */}
+        {activeTab === "text" && (
+          <div>
+            <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+              Body text (optional)
+            </label>
+            <div className="border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden">
+              <div className="bg-gray-100 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 p-3 flex items-center gap-1 overflow-x-auto">
+                <button type="button" className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded transition-colors" title="Bold">
+                  <Bold size={18} className="text-gray-600 dark:text-gray-400" />
+                </button>
+                <button type="button" className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded transition-colors" title="Italic">
+                  <Italic size={18} className="text-gray-600 dark:text-gray-400" />
+                </button>
+                <button type="button" className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded transition-colors" title="Strikethrough">
+                  <Strikethrough size={18} className="text-gray-600 dark:text-gray-400" />
+                </button>
+              </div>
+              <textarea
+                placeholder="Share your thoughts... (optional)"
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                maxLength={10000}
+                className="w-full h-48 px-4 py-3 bg-white dark:bg-slate-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none resize-none"
+              />
+              <div className="bg-gray-50 dark:bg-slate-800 px-4 py-2 text-right text-xs text-gray-500 dark:text-gray-400">
+                {content.length}/10000
+              </div>
+            </div>
           </div>
+        )}
 
-          {/* Editor */}
-          <textarea
-            placeholder="Body text (optional)"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            className="w-full h-48 px-4 py-3 bg-white dark:bg-slate-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none resize-none"
-          />
-        </div>
+        {activeTab === "images" && (
+          <div>
+            <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+              Image or Video <span className="text-red-500">*</span>
+            </label>
+            {previewImage ? (
+              <div className="relative w-full">
+                <img src={previewImage || "/placeholder.svg"} alt="Preview" className="w-full max-h-96 object-cover rounded-lg" />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPreviewImage(null)
+                    setImageUrl("")
+                  }}
+                  className="absolute top-2 right-2 p-2 bg-red-600 hover:bg-red-700 text-white rounded-full transition-colors"
+                >
+                  <X size={20} />
+                </button>
+                <label className="block mt-3">
+                  <input
+                    type="file"
+                    accept="image/*,video/*"
+                    onChange={handleImageUpload}
+                    disabled={isUploadingImage}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      const input = e.currentTarget.previousElementSibling as HTMLInputElement
+                      input.click()
+                    }}
+                    disabled={isUploadingImage}
+                    className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg font-semibold transition-colors"
+                  >
+                    {isUploadingImage ? "Uploading..." : "Change Image"}
+                  </button>
+                </label>
+              </div>
+            ) : (
+              <label className="w-full border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-lg p-8 text-center cursor-pointer hover:border-gray-400 dark:hover:border-slate-600 transition-colors">
+                <input
+                  type="file"
+                  accept="image/*,video/*"
+                  onChange={handleImageUpload}
+                  disabled={isUploadingImage}
+                  className="hidden"
+                />
+                <ImageIcon size={48} className="mx-auto text-gray-400 dark:text-gray-600 mb-3" />
+                <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
+                  {isUploadingImage ? "Uploading..." : "Drag and drop your image or video here"}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  PNG, JPG, GIF, WebP, MP4, WebM up to 50MB
+                </p>
+              </label>
+            )}
+            {validationErrors.imageUrl && <p className="text-red-500 text-sm mt-2">{validationErrors.imageUrl}</p>}
+          </div>
+        )}
+
+        {activeTab === "link" && (
+          <div>
+            <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+              Body text (optional)
+            </label>
+            <textarea
+              placeholder="Add optional context or discussion about the link..."
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              maxLength={10000}
+              className="w-full h-32 px-4 py-3 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none resize-none"
+            />
+          </div>
+        )}
 
         {/* Action Buttons */}
-        <div className="flex items-center justify-end gap-3">
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-slate-800">
           <button
             type="button"
             onClick={() => router.back()}
-            className="px-6 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full font-semibold transition-colors"
+            className="px-6 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg font-semibold transition-colors"
           >
-            Save Draft
+            Cancel
           </button>
           <button
             type="submit"
-            disabled={isLoading}
-            className="px-8 py-2 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-full font-semibold transition-colors"
+            disabled={isLoading || !title.trim() || !selectedCommunity || (activeTab === "images" && !imageUrl)}
+            className="px-8 py-2 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition-colors"
           >
             {isLoading ? "Posting..." : "Post"}
           </button>

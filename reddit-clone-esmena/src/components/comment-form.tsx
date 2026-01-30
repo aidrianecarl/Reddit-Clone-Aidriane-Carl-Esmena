@@ -55,13 +55,13 @@ export function CommentForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className={isReply ? "border-l-2 border-gray-200 pl-4 py-3" : ""}>
+    <form onSubmit={handleSubmit} className={`py-3 ${isReply ? "border-l-2 border-gray-300 dark:border-slate-700 pl-3 ml-3" : ""}`}>
       <textarea
         value={content}
         onChange={(e) => setContent(e.target.value)}
-        placeholder={isReply ? "What are your thoughts?" : "What are your thoughts?"}
-        rows={isReply ? 2 : 4}
-        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+        placeholder="What are your thoughts?"
+        rows={isReply ? 2 : 3}
+        className="w-full px-3 py-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-500 text-sm transition-colors"
       />
 
       {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
@@ -71,7 +71,7 @@ export function CommentForm({
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 border border-gray-300 text-gray-900 rounded-lg hover:bg-gray-100 font-semibold text-sm transition-colors"
+            className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-semibold text-sm transition-colors"
           >
             Cancel
           </button>
@@ -79,7 +79,7 @@ export function CommentForm({
         <button
           type="submit"
           disabled={isLoading || !content.trim()}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-sm disabled:opacity-50 transition-colors"
+          className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-semibold text-sm disabled:opacity-50 transition-colors"
         >
           {isLoading ? "Posting..." : "Comment"}
         </button>

@@ -108,27 +108,57 @@ export default function SubmitPage() {
     }
   }
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string)
+    if (!file) return
+    
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Upload failed")
       }
-      reader.readAsDataURL(file)
+
+      const data = await response.json()
+      setImagePreview(data.fileUrl)
+    } catch (err: any) {
+      setError(err.message || "Failed to upload image")
+      console.error("Upload error:", err)
     }
   }
 
-  const handleDragDrop = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleDragDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
     e.stopPropagation()
     const file = e.dataTransfer.files?.[0]
-    if (file && file.type.startsWith("image/")) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string)
+    if (!file || !file.type.startsWith("image/")) return
+    
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Upload failed")
       }
-      reader.readAsDataURL(file)
+
+      const data = await response.json()
+      setImagePreview(data.fileUrl)
+    } catch (err: any) {
+      setError(err.message || "Failed to upload image")
+      console.error("Upload error:", err)
     }
   }
 
@@ -158,8 +188,8 @@ export default function SubmitPage() {
         content: postType === "LINK" ? linkUrl : content || "",
         imageUrl: imagePreview || "",
         subredditId: subreddit.$id,
-        authorId: user!.$id,
-        postType: postType.toLowerCase(),
+        authorId: user?.$id || "",
+        postType: postType.toLowerCase() as "text" | "image" | "link",
       })
 
       setCreatedPost(post)

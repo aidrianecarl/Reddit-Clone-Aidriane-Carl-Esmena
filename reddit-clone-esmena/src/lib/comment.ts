@@ -10,14 +10,12 @@ export async function createComment(
   try {
     const comment = await databases.createDocument(DATABASE_ID, COMMENTS_COLLECTION, ID.unique(), {
       content,
-      authorId,
-      postId,
+      users: authorId,
+      posts: postId,
       parentCommentId: parentCommentId || null,
       upvotes: 0,
       downvotes: 0,
       replyCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
     })
     return comment
   } catch (error: any) {
@@ -28,11 +26,11 @@ export async function createComment(
 export async function getCommentsByPost(postId: string, limit = 50, offset = 0) {
   try {
     const response = await databases.listDocuments(DATABASE_ID, COMMENTS_COLLECTION, [
-      Query.equal("postId", postId),
+      Query.equal("posts", postId),
       Query.isNull("parentCommentId"),
       Query.limit(limit),
       Query.offset(offset),
-      Query.orderDesc("createdAt"),
+      Query.orderDesc("$createdAt"),
     ])
     return response
   } catch (error) {
@@ -45,7 +43,7 @@ export async function getReplies(parentCommentId: string) {
   try {
     const response = await databases.listDocuments(DATABASE_ID, COMMENTS_COLLECTION, [
       Query.equal("parentCommentId", parentCommentId),
-      Query.orderDesc("createdAt"),
+      Query.orderDesc("$createdAt"),
     ])
     return response.documents
   } catch (error) {
@@ -54,16 +52,30 @@ export async function getReplies(parentCommentId: string) {
   }
 }
 
+export async function getRepliesWithAuthor(parentCommentId: string) {
+  try {
+    const replies = await getReplies(parentCommentId)
+    return Promise.all(replies.map((reply) => enrichComment(reply)))
+  } catch (error) {
+    console.error("Failed to fetch enriched replies:", error)
+    return []
+  }
+}
+
 export async function enrichComment(comment: any) {
   try {
-    const author = await databases.listDocuments(DATABASE_ID, USERS_COLLECTION, [
-      Query.equal("userId", comment.authorId),
-    ])
+    if (!comment.users) {
+      console.log("[v0] Comment has no users field:", comment.$id)
+      return comment
+    }
+
+    const author = await databases.getDocument(DATABASE_ID, USERS_COLLECTION, comment.users)
     return {
       ...comment,
-      author: author.documents[0] || null,
+      author: author || null,
     }
-  } catch (error) {
+  } catch (error: any) {
+    console.log("[v0] Failed to enrich comment author:", comment.$id, error.message)
     return comment
   }
 }

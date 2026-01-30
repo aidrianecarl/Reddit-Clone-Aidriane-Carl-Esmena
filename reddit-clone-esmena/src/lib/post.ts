@@ -3,23 +3,23 @@ import { Query, ID } from "appwrite"
 
 interface CreatePostParams {
   title: string
-  content: string
+  content?: string
   imageUrl?: string
-  subredditId?: string | null
+  subredditId: string
   authorId: string
-  postType?: string
+  postType?: "text" | "image" | "link"
 }
 
 export async function createPost(params: CreatePostParams) {
   try {
-    const { title, content, imageUrl = "", subredditId, authorId, postType = "text" } = params
+    const { title, content = "", imageUrl = "", subredditId, authorId, postType = "text" } = params
     
     const post = await databases.createDocument(DATABASE_ID, POSTS_COLLECTION, ID.unique(), {
       title,
       content: content || "",
       imageUrl: imageUrl || "",
       users: authorId,
-      subreddits: subredditId || "",
+      subreddits: subredditId,
       upvotes: 0,
       downvotes: 0,
       commentCount: 0,
@@ -122,12 +122,18 @@ export async function updatePostCommentCount(postId: string, count: number) {
 
 export async function enrichPost(post: any) {
   try {
-    const author = await databases.listDocuments(DATABASE_ID, USERS_COLLECTION, [Query.equal("userId", post.users)])
+    if (!post.users) {
+      console.log("[v0] Post has no users field:", post.$id)
+      return post
+    }
+
+    const author = await databases.getDocument(DATABASE_ID, USERS_COLLECTION, post.users)
     return {
       ...post,
-      author: author.documents[0] || null,
+      author: author || null,
     }
-  } catch (error) {
+  } catch (error: any) {
+    console.log("[v0] Failed to enrich author for post:", post.$id, error.message)
     return post
   }
 }

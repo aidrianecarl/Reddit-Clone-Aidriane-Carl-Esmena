@@ -41,18 +41,27 @@ export default function Home() {
     const fetchPosts = async () => {
       try {
         setIsLoading(true)
-        const response = await getHomeFeed(20, 0, "newest")
-        if (response.documents && response.documents.length > 0) {
-          const enriched = await enrichPosts(response.documents)
-          setPosts(enriched)
+        const response = await getHomeFeed(20, 0, sortBy)
+        if (response && response.documents && response.documents.length > 0) {
+          try {
+            const enriched = await enrichPosts(response.documents)
+            setPosts(enriched)
+          } catch (enrichError) {
+            console.warn("Failed to enrich posts, showing raw data:", enrichError)
+            setPosts(response.documents)
+          }
           setHasMore(response.documents.length === 20)
         } else {
           setPosts([])
           setHasMore(false)
         }
         setPage(0)
-      } catch (error) {
+      } catch (error: any) {
         console.error("Failed to fetch posts:", error)
+        // Only show error if it's not an authorization error (user not logged in)
+        if (!error.message?.includes("unauthorized") && !error.message?.includes("not authorized")) {
+          console.error("Post fetch error:", error)
+        }
         setPosts([])
         setHasMore(false)
       } finally {
@@ -67,10 +76,17 @@ export default function Home() {
     if (!hasMore || isLoading) return
     try {
       const response = await getHomeFeed(20, (page + 1) * 20, sortBy)
-      const enriched = await enrichPosts(response.documents)
-      setPosts([...posts, ...enriched])
-      setPage(page + 1)
-      setHasMore(response.documents.length === 20)
+      if (response && response.documents) {
+        try {
+          const enriched = await enrichPosts(response.documents)
+          setPosts([...posts, ...enriched])
+        } catch (enrichError) {
+          console.warn("Failed to enrich posts, showing raw data:", enrichError)
+          setPosts([...posts, ...response.documents])
+        }
+        setPage(page + 1)
+        setHasMore(response.documents.length === 20)
+      }
     } catch (error) {
       console.error("Failed to load more posts:", error)
     }

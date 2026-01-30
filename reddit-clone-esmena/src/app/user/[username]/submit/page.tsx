@@ -77,15 +77,30 @@ function SubmitPageContent() {
     router.push(`/r/${subredditName}/submit?type=${postType}`, { scroll: false })
   }, [postType, subredditName, router])
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) {
-      setImageFile(file)
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string)
+    if (!file) return
+    
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Upload failed")
       }
-      reader.readAsDataURL(file)
+
+      const data = await response.json()
+      setImageFile(file)
+      setImagePreview(data.fileUrl)
+    } catch (err: any) {
+      setError(err.message || "Failed to upload image")
+      console.error("Upload error:", err)
     }
   }
 
@@ -115,8 +130,8 @@ function SubmitPageContent() {
         content: content || "",
         imageUrl: imagePreview || "",
         subredditId: subreddit.$id,
-        authorId: user!.$id,
-        postType: postType.toLowerCase(),
+        authorId: user?.$id || "",
+        postType: postType.toLowerCase() as "text" | "image" | "link",
       })
 
       setShowCrosspostModal(true)
