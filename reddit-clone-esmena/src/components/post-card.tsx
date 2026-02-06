@@ -59,7 +59,8 @@ export function PostCard({ post }: PostCardProps) {
   }
 
   const netVotes = upvoteCount - downvoteCount
-  const authorName = post.author?.name || post.author?.username || "Unknown"
+  const authorName = post.authorName || post.author?.name || post.author?.username || "Unknown"
+  const subredditName = post.subredditName || post.subreddit?.name || "Unknown"
   const timeAgo = post.$createdAt ? getTimeAgo(new Date(post.$createdAt)) : "Unknown"
 
   return (
@@ -67,10 +68,10 @@ export function PostCard({ post }: PostCardProps) {
       {/* Header with subreddit info and time */}
       <div className="px-4 py-2 flex items-center justify-between bg-white dark:bg-slate-900">
         <div className="flex items-center gap-2">
-          <div className="w-5 h-5 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-            r
+          <div className="w-5 h-5 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+            {subredditName.charAt(0).toUpperCase()}
           </div>
-          <span className="text-xs text-gray-500 dark:text-gray-400">{authorName} • {timeAgo}</span>
+          <span className="text-xs text-gray-500 dark:text-gray-400">r/{subredditName} • {timeAgo}</span>
         </div>
         <button className="text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-800 p-1 rounded">
           <span>⋯</span>

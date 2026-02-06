@@ -139,10 +139,10 @@ export function CreateSubredditModal({ isOpen, onClose }: CreateSubredditModalPr
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-slate-900 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white">
-          <h2 className="text-xl font-bold text-gray-900">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
             {step === 'topic' && 'What will your community be about?'}
             {step === 'privacy' && 'What kind of community is this?'}
             {step === 'details' && 'Tell us about your community'}
@@ -150,18 +150,18 @@ export function CreateSubredditModal({ isOpen, onClose }: CreateSubredditModalPr
           </h2>
           <button
             onClick={handleClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 transition-colors"
           >
             <X size={24} />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6">
+        <div className="p-6 bg-white dark:bg-slate-900">
           {/* Step 1: Topic Selection */}
           {step === 'topic' && (
             <div>
-              <p className="text-gray-600 mb-6">Choose a topic to help redditors discover your community</p>
+              <p className="text-gray-600 dark:text-gray-400 mb-6">Choose a topic to help redditors discover your community</p>
               <div className="grid grid-cols-2 gap-3 mb-6">
                 {TOPICS.map((topic) => (
                   <button
@@ -369,7 +369,7 @@ export function CreateSubredditModal({ isOpen, onClose }: CreateSubredditModalPr
         </div>
 
         {/* Footer */}
-        <div className="flex gap-3 p-6 border-t border-gray-200 sticky bottom-0 bg-white">
+        <div className="flex gap-3 p-6 border-t border-gray-200 dark:border-slate-800 sticky bottom-0 bg-white dark:bg-slate-900">
           {step === 'success' ? (
             <>
               <button

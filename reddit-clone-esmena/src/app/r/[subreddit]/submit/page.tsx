@@ -55,11 +55,13 @@ export default function SubmitPage() {
 
     const fetchData = async () => {
       try {
-        const sr = await getSubredditByName(subredditName)
-        if (sr) {
-          setSubreddit(sr)
-        } else {
-          setError("Subreddit not found")
+        if (subredditName && subredditName !== "profile") {
+          const sr = await getSubredditByName(subredditName)
+          if (sr) {
+            setSubreddit(sr)
+          } else {
+            setError("Subreddit not found")
+          }
         }
 
         if (user) {
@@ -85,7 +87,9 @@ export default function SubmitPage() {
 
   // Update URL when post type changes
   useEffect(() => {
-    router.push(`/r/${subredditName}/submit?type=${postType}`, { scroll: false })
+    if (subredditName && subredditName !== "profile") {
+      router.push(`/r/${subredditName}/submit?type=${postType}`, { scroll: false })
+    }
   }, [postType, subredditName, router])
 
   // Close dropdown when clicking outside
@@ -218,12 +222,14 @@ export default function SubmitPage() {
     router.push(`/r/${subredditName}/submit?type=TEXT`, { scroll: false })
   }
 
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-white dark:bg-slate-950">
         <Header onLoginClick={() => {}} onSignupClick={() => {}} onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
-        <div className="flex">
-          <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} isAuthenticated={isAuthenticated} />
+        <div className="flex relative">
+          <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} isAuthenticated={isAuthenticated} isCollapsed={isSidebarCollapsed} onToggleCollapse={() => setIsSidebarCollapsed((v) => !v)} />
         </div>
       </div>
     )
@@ -233,10 +239,12 @@ export default function SubmitPage() {
     <div className="min-h-screen bg-white dark:bg-slate-950">
       <Header onLoginClick={() => {}} onSignupClick={() => {}} onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
 
-      <div className="flex">
-        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} isAuthenticated={isAuthenticated} />
+      <div className="flex relative">
+        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} isAuthenticated={isAuthenticated} isCollapsed={isSidebarCollapsed} onToggleCollapse={() => setIsSidebarCollapsed((v) => !v)} />
 
-        <main className="flex-1 max-w-2xl mx-auto px-4 py-8">
+        <main className={`flex-1 max-w-2xl mx-auto px-4 py-8 transition-[margin] duration-300 ease-in-out ${
+          isSidebarCollapsed ? "lg:ml-20" : "lg:ml-64"
+        }`}>
           <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg p-6 shadow-sm">
             {/* Title */}
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Create post</h1>
@@ -287,19 +295,21 @@ export default function SubmitPage() {
                       <div className="border-t border-gray-200 dark:border-slate-700 px-4 py-2 text-xs font-semibold text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-slate-800">
                         YOUR PROFILE
                       </div>
-                      <Link
-                        href={`/user/${userProfile?.name}/submit?type=${postType}`}
-                        onClick={() => setShowCommunityDropdown(false)}
-                        className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors text-gray-900 dark:text-white"
-                      >
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                          {userProfile?.name?.[0]?.toUpperCase() || "U"}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm">u/{userProfile?.name}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">Your profile</p>
-                        </div>
-                      </Link>
+                      {userProfile && (
+                        <Link
+                          href={`/user/${userProfile?.name}/submit?type=${postType}`}
+                          onClick={() => setShowCommunityDropdown(false)}
+                          className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors text-gray-900 dark:text-white"
+                        >
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                            {userProfile?.name?.[0]?.toUpperCase() || "U"}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm">u/{userProfile?.name}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Your profile</p>
+                          </div>
+                        </Link>
+                      )}
                     </div>
                   )}
                 </div>

@@ -1,4 +1,4 @@
-import { databases, DATABASE_ID, POSTS_COLLECTION, USERS_COLLECTION } from "./appwrite"
+import { databases, DATABASE_ID, POSTS_COLLECTION, USERS_COLLECTION, SUBREDDITS_COLLECTION } from "./appwrite"
 import { Query, ID } from "appwrite"
 
 interface CreatePostParams {
@@ -93,18 +93,21 @@ export async function getHomeFeed(limit = 20, offset = 0, sortBy = "newest") {
 
 export async function getPostsByAuthor(authorId: string, limit = 20, offset = 0) {
   try {
+    console.log("[v0] getPostsByAuthor called with authorId:", authorId, "limit:", limit, "offset:", offset)
     const queries = [Query.equal("users", authorId), Query.limit(limit), Query.offset(offset)]
 
     try {
       queries.push(Query.orderDesc("$createdAt"))
     } catch (orderError) {
-      console.warn("Could not apply sort order:", orderError)
+      console.warn("[v0] Could not apply sort order:", orderError)
     }
 
+    console.log("[v0] Running query with", queries.length, "conditions")
     const response = await databases.listDocuments(DATABASE_ID, POSTS_COLLECTION, queries)
+    console.log("[v0] getPostsByAuthor response total:", response.total, "documents:", response.documents?.length)
     return response
   } catch (error) {
-    console.error("Failed to fetch user posts:", error)
+    console.error("[v0] Failed to fetch user posts:", error)
     return { documents: [], total: 0 }
   }
 }
@@ -122,19 +125,47 @@ export async function updatePostCommentCount(postId: string, count: number) {
 
 export async function enrichPost(post: any) {
   try {
-    if (!post.users) {
-      console.log("[v0] Post has no users field:", post.$id)
-      return post
+    let author = null
+    let authorName = "Unknown"
+    let subreddit = null
+    let subredditName = "Unknown"
+
+    // Fetch author
+    if (post.users) {
+      try {
+        author = await databases.getDocument(DATABASE_ID, USERS_COLLECTION, post.users)
+        authorName = author?.name || author?.username || "Unknown"
+        console.log("[v0] Successfully fetched author:", authorName)
+      } catch (error: any) {
+        console.log("[v0] Failed to fetch author:", error.message)
+      }
     }
 
-    const author = await databases.getDocument(DATABASE_ID, USERS_COLLECTION, post.users)
+    // Fetch subreddit
+    if (post.subreddits) {
+      try {
+        subreddit = await databases.getDocument(DATABASE_ID, SUBREDDITS_COLLECTION, post.subreddits)
+        subredditName = subreddit?.name || "Unknown"
+        console.log("[v0] Successfully fetched subreddit:", subredditName)
+      } catch (error: any) {
+        console.log("[v0] Failed to fetch subreddit:", error.message)
+      }
+    }
+
     return {
       ...post,
       author: author || null,
+      authorName,
+      subreddit: subreddit || null,
+      subredditName,
     }
   } catch (error: any) {
-    console.log("[v0] Failed to enrich author for post:", post.$id, error.message)
-    return post
+    console.log("[v0] Error enriching post:", post.$id, "error:", error.message)
+    return {
+      ...post,
+      authorName: "Unknown",
+      subredditName: "Unknown",
+    }
   }
 }
 

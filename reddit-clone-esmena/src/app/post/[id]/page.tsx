@@ -172,11 +172,11 @@ export default function PostPage() {
             {/* Post Header */}
             <div className="px-4 py-2 flex items-center justify-between bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800">
               <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                  r
+                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                  {(post.subredditName || "r").charAt(0).toUpperCase()}
                 </div>
                 <span className="text-xs text-gray-500 dark:text-gray-400">
-                  {post.author?.name || "Unknown"} • {getTimeAgo(new Date(post.$createdAt))}
+                  r/{post.subredditName || "Unknown"} • {getTimeAgo(new Date(post.$createdAt))}
                 </span>
               </div>
               <button className="text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-800 p-1 rounded">
@@ -260,6 +260,7 @@ export default function PostPage() {
                       onReplyClick={handleReplyClick}
                       replies={expandedReplies.get(comment.$id) || []}
                       isLoadingReplies={loadingReplies.has(comment.$id)}
+                      isReplyingTo={replyingTo === comment.$id}
                     />
 
                     {replyingTo === comment.$id && (

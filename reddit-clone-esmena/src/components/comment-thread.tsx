@@ -11,6 +11,7 @@ interface CommentThreadProps {
   onReplyClick?: (commentId: string) => void
   replies?: any[]
   isLoadingReplies?: boolean
+  isReplyingTo?: boolean
 }
 
 export function CommentThread({
@@ -19,11 +20,12 @@ export function CommentThread({
   onReplyClick,
   replies = [],
   isLoadingReplies = false,
+  isReplyingTo = false,
 }: CommentThreadProps) {
   const [userVote, setUserVote] = useState<"upvote" | "downvote" | null>(null)
   const [upvoteCount, setUpvoteCount] = useState(comment.upvotes || 0)
   const [downvoteCount, setDownvoteCount] = useState(comment.downvotes || 0)
-  const [showReplies, setShowReplies] = useState(false)
+  const [showReplies, setShowReplies] = useState(isReplyingTo || replies.length > 0)
   const [isVoting, setIsVoting] = useState(false)
   const { user, isAuthenticated } = useAuth()
 
@@ -136,15 +138,20 @@ export function CommentThread({
         </div>
 
         {/* Replies */}
-        {showReplies && (
+        {showReplies && replies.length > 0 && (
           <div className="mt-4 space-y-0">
             {isLoadingReplies ? (
               <p className="text-xs text-gray-500 dark:text-gray-400 py-2">Loading replies...</p>
-            ) : replies.length === 0 ? (
-              <p className="text-xs text-gray-500 dark:text-gray-400 py-2">No replies yet</p>
             ) : (
               replies.map((reply) => (
-                <CommentThread key={reply.$id} comment={reply} depth={depth + 1} onReplyClick={onReplyClick} />
+                <CommentThread 
+                  key={reply.$id} 
+                  comment={reply} 
+                  depth={depth + 1} 
+                  onReplyClick={onReplyClick}
+                  isReplyingTo={false}
+                  replies={[]}
+                />
               ))
             )}
           </div>

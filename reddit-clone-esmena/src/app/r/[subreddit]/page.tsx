@@ -5,11 +5,13 @@ import { useParams } from "next/navigation"
 import Link from "next/link"
 import { Header } from "@/components/header"
 import { Sidebar } from "@/components/sidebar"
-import { AuthModal } from "@/components/auth-modal"
+import { LoginModal } from "@/components/login-modal"
+import { SignupModal } from "@/components/signup-modal"
 import { PostCard } from "@/components/post-card"
 import { getSubredditByName } from "@/lib/subreddit"
 import { getPostsBySubreddit, enrichPosts } from "@/lib/post"
 import { useAuth } from "@/app/providers"
+import { AuthModal } from "@/components/auth-modal"
 
 export default function SubredditPage() {
   const params = useParams()
@@ -18,11 +20,34 @@ export default function SubredditPage() {
   const [posts, setPosts] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
+  const [isSignupModalOpen, setIsSignupModalOpen] = useState(false)
   const [sortBy, setSortBy] = useState("newest")
-  const [page, setPage] = useState(0)
-  const [hasMore, setHasMore] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPosts, setTotalPosts] = useState(0)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const { isAuthenticated, userProfile } = useAuth()
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
+  const postsPerPage = 10
+  const [hasMore, setHasMore] = useState(false)
+
+  const setPage = (page: number) => {
+    setCurrentPage(page)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const loadMore = async () => {
+    try {
+      const offset = currentPage * postsPerPage
+      const response = await getPostsBySubreddit(subreddit.$id, postsPerPage, offset, sortBy)
+      const enriched = await enrichPosts(response.documents)
+      setPosts((prevPosts) => [...prevPosts, ...enriched])
+      setTotalPosts(response.total || 0)
+      setHasMore(enriched.length > 0)
+    } catch (error) {
+      console.error("Failed to load more posts:", error)
+    }
+  }
 
   useEffect(() => {
     const fetchData = async () => {
@@ -31,10 +56,12 @@ export default function SubredditPage() {
         setSubreddit(sr)
 
         if (sr) {
-          const response = await getPostsBySubreddit(sr.$id, 20, 0, sortBy)
+          const offset = (currentPage - 1) * postsPerPage
+          const response = await getPostsBySubreddit(sr.$id, postsPerPage, offset, sortBy)
           const enriched = await enrichPosts(response.documents)
           setPosts(enriched)
-          setHasMore(response.documents.length === 20)
+          setTotalPosts(response.total || 0)
+          setHasMore(enriched.length > 0)
         }
       } catch (error) {
         console.error("Failed to fetch data:", error)
@@ -44,24 +71,22 @@ export default function SubredditPage() {
     }
 
     fetchData()
-  }, [subredditName, sortBy])
+  }, [subredditName, sortBy, currentPage])
 
-  const loadMore = async () => {
-    if (!subreddit || !hasMore) return
+  const totalPages = Math.ceil(totalPosts / postsPerPage)
 
-    const response = await getPostsBySubreddit(subreddit.$id, 20, (page + 1) * 20, sortBy)
-    const enriched = await enrichPosts(response.documents)
-    setPosts([...posts, ...enriched])
-    setPage(page + 1)
-    setHasMore(response.documents.length === 20)
+  const goToPage = (page: number) => {
+    if (page > 0 && page <= totalPages) {
+      setPage(page)
+    }
   }
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-white">
-        <Header onAuthClick={() => setIsAuthModalOpen(true)} onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
-        <div className="flex">
-          <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} isAuthenticated={isAuthenticated} />
+      <div className="min-h-screen bg-gradient-to-b from-orange-50 dark:from-slate-950 to-white dark:to-slate-900">
+        <Header onLoginClick={() => setIsLoginModalOpen(true)} onSignupClick={() => setIsSignupModalOpen(true)} onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
+        <div className="flex relative">
+          <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} isAuthenticated={isAuthenticated} isCollapsed={isSidebarCollapsed} onToggleCollapse={() => setIsSidebarCollapsed((v) => !v)} />
           <main className="flex-1 flex items-center justify-center min-h-screen">
             <p className="text-gray-500">Loading community...</p>
           </main>
@@ -72,10 +97,10 @@ export default function SubredditPage() {
 
   if (!subreddit) {
     return (
-      <div className="min-h-screen bg-white">
-        <Header onAuthClick={() => setIsAuthModalOpen(true)} onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
-        <div className="flex">
-          <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} isAuthenticated={isAuthenticated} />
+      <div className="min-h-screen bg-gradient-to-b from-orange-50 dark:from-slate-950 to-white dark:to-slate-900">
+        <Header onLoginClick={() => setIsLoginModalOpen(true)} onSignupClick={() => setIsSignupModalOpen(true)} onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
+        <div className="flex relative">
+          <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} isAuthenticated={isAuthenticated} isCollapsed={isSidebarCollapsed} onToggleCollapse={() => setIsSidebarCollapsed((v) => !v)} />
           <main className="flex-1 flex items-center justify-center min-h-screen">
             <div className="text-center">
               <p className="text-gray-500 mb-4">Community not found</p>
@@ -90,130 +115,151 @@ export default function SubredditPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <Header onAuthClick={() => setIsAuthModalOpen(true)} onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
+    <div className="min-h-screen bg-gradient-to-b from-orange-50 dark:from-slate-950 to-white dark:to-slate-900">
+      <Header onLoginClick={() => setIsLoginModalOpen(true)} onSignupClick={() => setIsSignupModalOpen(true)} onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
 
-      <div className="flex">
-        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} isAuthenticated={isAuthenticated} />
+      <div className="flex relative">
+        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} isAuthenticated={isAuthenticated} isCollapsed={isSidebarCollapsed} onToggleCollapse={() => setIsSidebarCollapsed((v) => !v)} />
 
-        <main className="flex-1 max-w-3xl mx-auto px-4 py-6">
-          {/* Subreddit Header */}
-          <div className="bg-white rounded-lg overflow-hidden mb-6">
-            <div className="h-40 bg-gradient-to-r from-gray-300 to-gray-400 flex items-center justify-center relative">
-              <div className="w-32 h-32 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white text-6xl font-bold shadow-lg">
-                {subreddit.name?.charAt(0).toUpperCase()}
-              </div>
-              <button className="absolute top-4 right-4 w-10 h-10 bg-gray-700 hover:bg-gray-800 rounded-full flex items-center justify-center text-white">
-                ✎
-              </button>
-            </div>
-            <div className="px-6 pb-6 pt-4">
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h1 className="text-4xl font-bold text-gray-900">r/{subreddit.name}</h1>
-                  <p className="text-gray-600 mt-2">{subreddit.description || "A community"}</p>
-                </div>
-                <div className="flex gap-2">
-                  <Link href={`/r/${subreddit.name}/submit?type=TEXT`} className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-semibold">
-                    + Create Post
-                  </Link>
-                  <button className="px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-full font-semibold">
-                    Mod Tools
-                  </button>
-                  <button className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center">
-                    ⋯
+        {/* Main Feed + Right Sidebar */}
+        <div className="flex flex-1 gap-4">
+          {/* Feed */}
+          <main className={`flex-1 px-4 py-6 transition-[margin] duration-300 ease-in-out ${
+            isSidebarCollapsed ? "lg:ml-20" : "lg:ml-64"
+          }`}>
+            <div className="max-w-3xl mx-auto space-y-6">
+              {/* Subreddit Header */}
+              <div className="bg-white dark:bg-slate-900 rounded-lg overflow-hidden">
+                <div className="h-40 bg-gradient-to-r from-gray-300 dark:from-slate-700 to-gray-400 dark:to-slate-600 flex items-center justify-center relative">
+                  <div className="w-32 h-32 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white text-6xl font-bold shadow-lg">
+                    {subreddit.name?.charAt(0).toUpperCase()}
+                  </div>
+                  <button className="absolute top-4 right-4 w-10 h-10 bg-gray-700 dark:bg-gray-600 hover:bg-gray-800 dark:hover:bg-gray-700 rounded-full flex items-center justify-center text-white">
+                    ✎
                   </button>
                 </div>
-              </div>
-            </div>
-          </div>
-
-
-
-          {/* Sort Options */}
-          <div className="mb-4 flex gap-2">
-            {["newest", "top", "hot"].map((option) => (
-              <button
-                key={option}
-                onClick={() => {
-                  setSortBy(option)
-                  setPage(0)
-                }}
-                className={`px-4 py-2 rounded-full font-semibold transition-colors ${
-                  sortBy === option ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-900 hover:bg-gray-200"
-                }`}
-              >
-                {option.charAt(0).toUpperCase() + option.slice(1)}
-              </button>
-            ))}
-          </div>
-
-          {/* Posts Feed */}
-          {posts.length === 0 ? (
-            <div className="bg-white rounded-lg p-8 text-center">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">This community doesn't have any posts yet</h2>
-              <p className="text-gray-600 mb-6">Make one and get this feed started.</p>
-              <button className="px-8 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-full font-semibold">
-                Create Post
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {posts.map((post) => (
-                <PostCard key={post.$id} post={post} />
-              ))}
-
-              {hasMore && (
-                <button
-                  onClick={loadMore}
-                  className="w-full px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-900 rounded-lg font-semibold transition-colors"
-                >
-                  Load More
-                </button>
-              )}
-            </div>
-          )}
-        </main>
-
-        {/* Right Sidebar */}
-        <aside className="w-80 pl-4 py-6 hidden xl:block">
-          <div className="sticky top-20 bg-white rounded-lg p-6 space-y-6">
-            <div>
-              <h3 className="font-bold text-gray-900 mb-4">Build your community</h3>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-lg">
-                  <span className="text-2xl">🏆</span>
-                  <div className="text-sm">
-                    <p className="font-semibold text-white">Finish setting up</p>
-                    <p className="text-yellow-100 text-xs">1/3 achievements unlocked</p>
+                <div className="px-6 pb-6 pt-4">
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h1 className="text-4xl font-bold text-gray-900 dark:text-white">r/{subreddit.name}</h1>
+                      <p className="text-gray-600 dark:text-gray-300 mt-2">{subreddit.description || "A community"}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Link href={`/r/${subreddit.name}/submit?type=TEXT`} className="px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-full font-semibold transition-colors">
+                        Create Post
+                      </Link>
+                    </div>
                   </div>
                 </div>
-                <div className="p-3 bg-gray-50 rounded-lg">
-                  <p className="font-semibold text-gray-900 text-sm mb-2">Create a welcome post</p>
-                  <button className="w-full px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-900 text-sm font-semibold rounded-lg">
-                    Create
+              </div>
+
+              {/* Sort Options */}
+              <div className="flex gap-2">
+                {["newest", "top", "hot"].map((option) => (
+                  <button
+                    key={option}
+                    onClick={() => {
+                      setSortBy(option)
+                      setPage(0)
+                    }}
+                    className={`px-4 py-2 rounded-full font-semibold transition-colors ${
+                      sortBy === option ? "bg-orange-600 text-white" : "bg-gray-100 dark:bg-slate-800 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-slate-700"
+                    }`}
+                  >
+                    {option.charAt(0).toUpperCase() + option.slice(1)}
                   </button>
+                ))}
+              </div>
+
+              {/* Posts Feed */}
+              {posts.length === 0 ? (
+                <div className="bg-white dark:bg-slate-900 rounded-lg p-8 text-center border border-gray-200 dark:border-slate-800">
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">This community doesn't have any posts yet</h2>
+                  <p className="text-gray-600 dark:text-gray-300 mb-6">Make one and get this feed started.</p>
+                  <Link href={`/r/${subreddit.name}/submit?type=TEXT`} className="inline-block px-8 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-full font-semibold transition-colors">
+                    Create Post
+                  </Link>
                 </div>
-                <div className="p-3 bg-gray-50 rounded-lg">
-                  <p className="font-semibold text-gray-900 text-sm mb-2">Highlight your welcome post</p>
-                  <p className="text-gray-600 text-xs">
-                    Make the post new members see first
-                  </p>
-                </div>
+              ) : (
+                <>
+                  <div className="space-y-4">
+                    {posts.map((post) => (
+                      <PostCard key={post.$id} post={post} />
+                    ))}
+                  </div>
+
+                  {/* Pagination Controls */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-center gap-2 mt-8 pb-6">
+                      <button
+                        onClick={() => goToPage(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className="px-4 py-2 bg-gray-100 dark:bg-slate-800 text-gray-900 dark:text-white rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Previous
+                      </button>
+                      
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                          <button
+                            key={page}
+                            onClick={() => goToPage(page)}
+                            className={`px-3 py-2 rounded-lg font-medium transition-colors ${
+                              currentPage === page
+                                ? 'bg-orange-600 text-white'
+                                : 'bg-gray-100 dark:bg-slate-800 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-slate-700'
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        ))}
+                      </div>
+                      
+                      <button
+                        onClick={() => goToPage(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        className="px-4 py-2 bg-gray-100 dark:bg-slate-800 text-gray-900 dark:text-white rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </main>
+
+          {/* Right Sidebar */}
+          <aside className="hidden xl:block w-80 pl-4 py-6">
+            <div className="sticky top-20 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg p-4">
+              <h3 className="font-bold text-gray-900 dark:text-white mb-4">Community Info</h3>
+              <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-center py-4 text-gray-500 dark:text-gray-500">
+                  More information coming soon...
+                </p>
               </div>
             </div>
-
-            <div className="border-t border-gray-200 pt-6">
-              <p className="text-sm text-gray-600 mb-4">
-                <Link href="#" className="text-blue-600 hover:underline">
-                  Join r/NewMods
-                </Link>
-              </p>
-            </div>
-          </div>
-        </aside>
+          </aside>
+        </div>
       </div>
 
+      {/* Modals */}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onSwitchToSignup={() => {
+          setIsLoginModalOpen(false)
+          setIsSignupModalOpen(true)
+        }}
+      />
+      <SignupModal
+        isOpen={isSignupModalOpen}
+        onClose={() => setIsSignupModalOpen(false)}
+        onSwitchToLogin={() => {
+          setIsSignupModalOpen(false)
+          setIsLoginModalOpen(true)
+        }}
+      />
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     </div>
   )

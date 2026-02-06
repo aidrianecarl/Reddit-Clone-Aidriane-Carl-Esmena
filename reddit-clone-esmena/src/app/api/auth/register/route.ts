@@ -7,7 +7,6 @@ export async function POST(request: Request) {
   try {
     const { email, password } = await request.json()
 
-    // Validate required env variables
     const endpoint = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT
     const projectId = process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID
     const databaseId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID
@@ -21,25 +20,19 @@ export async function POST(request: Request) {
       )
     }
 
-    // ------------------------
-    // Server-side Appwrite client
-    // ------------------------
+    // Server Appwrite client
     const client = new Client()
-      .setEndpoint(endpoint) // Appwrite endpoint
-      .setProject(projectId) // Project ID
-      .setKey(apiKey) // Server API key
+      .setEndpoint(endpoint)
+      .setProject(projectId)
+      .setKey(apiKey)
 
     const account = new Account(client)
     const databases = new Databases(client)
 
-    // ------------------------
-    // Create user in Appwrite Auth
-    // ------------------------
+    // ✅ Create Auth user
     const user = await account.create(ID.unique(), email, password)
 
-    // ------------------------
-    // Generate random username
-    // ------------------------
+    // Generate username
     const adjectives = ["Happy", "Swift", "Bright", "Cool", "Smart", "Quick", "Gentle", "Kind"]
     const nouns = ["Tiger", "Eagle", "Dragon", "Phoenix", "Lion", "Falcon", "Bear", "Wolf"]
 
@@ -48,13 +41,11 @@ export async function POST(request: Request) {
       nouns[Math.floor(Math.random() * nouns.length)] +
       Math.floor(Math.random() * 10000)
 
-    // ------------------------
-    // Create user profile document in database
-    // ------------------------
-    const userDoc = await databases.createDocument(
+    // ✅ Create profile with SAME ID as auth user
+    await databases.createDocument(
       databaseId,
       usersCollectionId,
-      ID.unique(),
+      user.$id, // ⭐ CRITICAL FIX
       {
         name,
         email,
@@ -63,9 +54,6 @@ export async function POST(request: Request) {
       }
     )
 
-    // ------------------------
-    // Return success response
-    // ------------------------
     return NextResponse.json(
       {
         success: true,
@@ -79,6 +67,7 @@ export async function POST(request: Request) {
     )
   } catch (error: any) {
     console.error("[REGISTER] Error:", error)
+
     return NextResponse.json(
       { error: error.message || "Registration failed" },
       { status: 400 }

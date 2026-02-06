@@ -1,5 +1,7 @@
 "use client"
 
+import React from "react"
+
 import Link from "next/link"
 import {
   Home,
@@ -60,6 +62,11 @@ export function Sidebar({
         onClose={() => setIsCreateModalOpen(false)}
       />
 
+      {/* Modal Backdrop - Darkens sidebar and disables interactions */}
+      {isCreateModalOpen && (
+        <div className="fixed inset-0 bg-black/40 z-40" />
+      )}
+
       {/* Mobile Overlay */}
       {isOpen && (
         <div
@@ -82,6 +89,7 @@ export function Sidebar({
           transition-all duration-300 ease-in-out
           ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
           ${isCollapsed ? "w-20" : "w-64"}
+          ${isCreateModalOpen ? "pointer-events-none opacity-50" : ""}
         `}
       >
         {/* Collapse Button (Desktop) */}

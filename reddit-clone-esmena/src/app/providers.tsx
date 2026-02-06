@@ -35,7 +35,7 @@ const AuthContext = createContext<AuthContextType>({
   userProfile: null,
   isLoading: true,
   isAuthenticated: false,
-  refreshUser: async () => {},
+  refreshUser: async () => { },
 })
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -49,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (appwriteUser) {
         setUser(appwriteUser)
         const profile = await getUserProfile(appwriteUser.email)
-        setUserProfile(profile)
+        setUserProfile(profile as UserProfile | null)
       } else {
         setUser(null)
         setUserProfile(null)
