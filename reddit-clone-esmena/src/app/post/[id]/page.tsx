@@ -8,11 +8,10 @@ import { AuthModal } from "@/components/auth-modal"
 import { CommentForm } from "@/components/comment-form"
 import { CommentThread } from "@/components/comment-thread"
 import { getPostById, enrichPost } from "@/lib/post"
-import { getCommentsByPost, enrichComments, getRepliesWithAuthor } from "@/lib/comment"
+import { getCommentsByPost, enrichComments, getNestedCommentsWithUsers } from "@/lib/comment"
 import { useAuth } from "@/app/providers"
 import { ArrowUp, ArrowDown, MessageCircle } from "lucide-react"
-import { getReplies } from "@/lib/reply" // Declaring getReplies variable
-import { getUserVote, voteOnPost } from "@/lib/vote" // Declaring getUserVote and voteOnPost variables
+import { getUserVote, voteOnPost } from "@/lib/vote"
 
 export default function PostPage() {
   const params = useParams()
@@ -22,6 +21,7 @@ export default function PostPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [userVote, setUserVote] = useState<"upvote" | "downvote" | null>(null)
   const [upvoteCount, setUpvoteCount] = useState(0)
   const [downvoteCount, setDownvoteCount] = useState(0)
@@ -82,8 +82,8 @@ export default function PostPage() {
       if (!expandedReplies.has(commentId)) {
         setLoadingReplies((prev) => new Set([...prev, commentId]))
         try {
-          const enrichedReplies = await getRepliesWithAuthor(commentId)
-          setExpandedReplies((prev) => new Map([...prev, [commentId, enrichedReplies]]))
+          const nestedComments = await getNestedCommentsWithUsers(commentId)
+          setExpandedReplies((prev) => new Map([...prev, [commentId, nestedComments]]))
         } finally {
           setLoadingReplies((prev) => {
             const next = new Set(prev)
@@ -132,9 +132,9 @@ export default function PostPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-white dark:bg-slate-950">
-        <Header onAuthClick={() => setIsAuthModalOpen(true)} onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
+        <Header onLoginClick={() => setIsAuthModalOpen(true)} onSignupClick={() => setIsAuthModalOpen(true)} onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
         <div className="flex">
-          <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} isAuthenticated={isAuthenticated} />
+          <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} isAuthenticated={isAuthenticated} isCollapsed={isSidebarCollapsed} onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
           <main className="flex-1 flex items-center justify-center min-h-screen">
             <p className="text-gray-500 dark:text-gray-400">Loading post...</p>
           </main>
@@ -146,9 +146,9 @@ export default function PostPage() {
   if (!post) {
     return (
       <div className="min-h-screen bg-white dark:bg-slate-950">
-        <Header onAuthClick={() => setIsAuthModalOpen(true)} onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
+        <Header onLoginClick={() => setIsAuthModalOpen(true)} onSignupClick={() => setIsAuthModalOpen(true)} onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
         <div className="flex">
-          <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} isAuthenticated={isAuthenticated} />
+          <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} isAuthenticated={isAuthenticated} isCollapsed={isSidebarCollapsed} onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
           <main className="flex-1 flex items-center justify-center min-h-screen">
             <p className="text-gray-500 dark:text-gray-400">Post not found</p>
           </main>
@@ -161,10 +161,10 @@ export default function PostPage() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950">
-      <Header onAuthClick={() => setIsAuthModalOpen(true)} onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
+      <Header onLoginClick={() => setIsAuthModalOpen(true)} onSignupClick={() => setIsAuthModalOpen(true)} onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
 
       <div className="flex">
-        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} isAuthenticated={isAuthenticated} />
+        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} isAuthenticated={isAuthenticated} isCollapsed={isSidebarCollapsed} onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
 
         <main className="flex-1 max-w-3xl mx-auto px-4 py-6">
           {/* Post */}
@@ -268,9 +268,8 @@ export default function PostPage() {
                         postId={postId}
                         parentCommentId={comment.$id}
                         onCommentCreated={async () => {
-                          const enrichedReplies = await getRepliesWithAuthor(comment.$id)
-                          setExpandedReplies((prev) => new Map([...prev, [comment.$id, enrichedReplies]]))
-                          handleCommentCreated()
+                          const nestedComments = await getNestedCommentsWithUsers(comment.$id)
+                          setExpandedReplies((prev) => new Map([...prev, [comment.$id, nestedComments]]))
                         }}
                         onCancel={() => setReplyingTo(null)}
                         isReply

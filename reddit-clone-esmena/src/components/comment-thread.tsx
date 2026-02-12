@@ -71,7 +71,7 @@ export function CommentThread({
   }
 
   const netVotes = upvoteCount - downvoteCount
-  const authorName = comment.author?.name || "Unknown User"
+  const authorName = comment.author?.name || (typeof comment.users === 'string' ? comment.users : "Unknown User")
   const timeAgo = comment.$createdAt ? getTimeAgo(new Date(comment.$createdAt)) : "Unknown"
 
   return (
@@ -138,21 +138,52 @@ export function CommentThread({
         </div>
 
         {/* Replies */}
-        {showReplies && replies.length > 0 && (
+        {showReplies && (
           <div className="mt-4 space-y-0">
             {isLoadingReplies ? (
               <p className="text-xs text-gray-500 dark:text-gray-400 py-2">Loading replies...</p>
+            ) : replies.length > 0 ? (
+              replies.map((reply) => {
+                const replyAuthorName = reply.author?.name || (typeof reply.users === 'string' ? reply.users : "Unknown User")
+                return (
+                  <div key={reply.$id} className="border-l-2 border-gray-300 dark:border-slate-700 pl-3 ml-3">
+                    <div className="py-3">
+                      {/* Reply User info and time */}
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="font-semibold text-gray-900 dark:text-white text-sm">{replyAuthorName}</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">•</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">{getTimeAgo(new Date(reply.$createdAt))}</span>
+                      </div>
+
+                      {/* Reply Text */}
+                      <p className="text-sm text-gray-700 dark:text-gray-300 mb-3 whitespace-pre-wrap break-words">{reply.content}</p>
+
+                      {/* Reply Actions Bar */}
+                      <div className="flex items-center gap-4 text-xs text-gray-600 dark:text-gray-400">
+                        <div className="flex items-center gap-1">
+                          <button className="flex items-center gap-1 px-2 py-1 rounded hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors text-gray-500 dark:text-gray-400">
+                            <ArrowUp size={16} />
+                          </button>
+                          <span className="font-medium w-5 text-center text-gray-700 dark:text-gray-300">{(reply.upvotes || 0) - (reply.downvotes || 0)}</span>
+                          <button className="flex items-center gap-1 px-2 py-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-gray-500 dark:text-gray-400">
+                            <ArrowDown size={16} />
+                          </button>
+                        </div>
+
+                        <button
+                          onClick={() => onReplyClick?.(reply.$id)}
+                          className="flex items-center gap-1 px-2 py-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                        >
+                          <MessageCircle size={16} />
+                          <span className="font-medium">Reply</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })
             ) : (
-              replies.map((reply) => (
-                <CommentThread 
-                  key={reply.$id} 
-                  comment={reply} 
-                  depth={depth + 1} 
-                  onReplyClick={onReplyClick}
-                  isReplyingTo={false}
-                  replies={[]}
-                />
-              ))
+              <p className="text-xs text-gray-500 dark:text-gray-400 py-2">No replies yet</p>
             )}
           </div>
         )}

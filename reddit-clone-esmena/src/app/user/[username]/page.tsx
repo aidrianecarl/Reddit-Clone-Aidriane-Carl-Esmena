@@ -122,7 +122,7 @@ console.log("Posts response:", postsResponse)
           <main className={`flex-1 transition-[margin] duration-300 ease-in-out ${
             isSidebarCollapsed ? "lg:ml-20" : "lg:ml-64"
           }`}>
-            <div className="max-w-3xl mx-auto py-6">
+            <div className="max-w-2xl mx-auto py-6">
               {/* Profile Header - Compact Style */}
               <div className="flex items-start gap-4 mb-8">
                 {/* Avatar */}

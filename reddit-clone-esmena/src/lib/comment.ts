@@ -1,4 +1,4 @@
-import { databases, DATABASE_ID, COMMENTS_COLLECTION, USERS_COLLECTION } from "./appwrite"
+import { databases, DATABASE_ID, COMMENTS_COLLECTION, NESTED_COMMENTS_COLLECTION, USERS_COLLECTION } from "./appwrite"
 import { Query, ID } from "appwrite"
 
 export async function createComment(
@@ -8,11 +8,24 @@ export async function createComment(
   parentCommentId: string | null = null,
 ) {
   try {
+    // If replying to a comment, save in nested_comments collection
+    if (parentCommentId) {
+      const nestedComment = await databases.createDocument(DATABASE_ID, NESTED_COMMENTS_COLLECTION, ID.unique(), {
+        content,
+        users: authorId,
+        posts: postId,
+        comments: parentCommentId,
+        upvotes: 0,
+        downvotes: 0,
+      })
+      return nestedComment
+    }
+
+    // Otherwise save as parent comment
     const comment = await databases.createDocument(DATABASE_ID, COMMENTS_COLLECTION, ID.unique(), {
       content,
       users: authorId,
       posts: postId,
-      parentCommentId: parentCommentId || null,
       upvotes: 0,
       downvotes: 0,
       replyCount: 0,
@@ -27,7 +40,6 @@ export async function getCommentsByPost(postId: string, limit = 50, offset = 0) 
   try {
     const response = await databases.listDocuments(DATABASE_ID, COMMENTS_COLLECTION, [
       Query.equal("posts", postId),
-      Query.isNull("parentCommentId"),
       Query.limit(limit),
       Query.offset(offset),
       Query.orderDesc("$createdAt"),
@@ -41,8 +53,8 @@ export async function getCommentsByPost(postId: string, limit = 50, offset = 0) 
 
 export async function getReplies(parentCommentId: string) {
   try {
-    const response = await databases.listDocuments(DATABASE_ID, COMMENTS_COLLECTION, [
-      Query.equal("parentCommentId", parentCommentId),
+    const response = await databases.listDocuments(DATABASE_ID, NESTED_COMMENTS_COLLECTION, [
+      Query.equal("comments", parentCommentId),
       Query.orderDesc("$createdAt"),
     ])
     return response.documents
@@ -52,12 +64,29 @@ export async function getReplies(parentCommentId: string) {
   }
 }
 
-export async function getRepliesWithAuthor(parentCommentId: string) {
+export async function getNestedCommentsWithUsers(parentCommentId: string) {
   try {
     const replies = await getReplies(parentCommentId)
-    return Promise.all(replies.map((reply) => enrichComment(reply)))
+    
+    // Fetch user data for each reply
+    const repliesWithUsers = await Promise.all(
+      replies.map(async (reply) => {
+        try {
+          const author = await databases.getDocument(DATABASE_ID, USERS_COLLECTION, reply.users)
+          return {
+            ...reply,
+            author: author,
+          }
+        } catch (error) {
+          console.error("Failed to fetch user:", error)
+          return reply
+        }
+      })
+    )
+    
+    return repliesWithUsers
   } catch (error) {
-    console.error("Failed to fetch enriched replies:", error)
+    console.error("Failed to fetch nested comments with users:", error)
     return []
   }
 }
@@ -65,7 +94,6 @@ export async function getRepliesWithAuthor(parentCommentId: string) {
 export async function enrichComment(comment: any) {
   try {
     if (!comment.users) {
-      console.log("[v0] Comment has no users field:", comment.$id)
       return comment
     }
 
@@ -75,7 +103,6 @@ export async function enrichComment(comment: any) {
       author: author || null,
     }
   } catch (error: any) {
-    console.log("[v0] Failed to enrich comment author:", comment.$id, error.message)
     return comment
   }
 }
