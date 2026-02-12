@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUserProfile(null)
       }
     } catch (error) {
-      console.error("[v0] Error refreshing user:", error)
+      console.error("Error refreshing user:", error)
       setUser(null)
       setUserProfile(null)
     } finally {

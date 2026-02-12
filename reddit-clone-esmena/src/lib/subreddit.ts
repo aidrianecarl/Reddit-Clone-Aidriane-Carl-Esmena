@@ -88,3 +88,41 @@ export async function getUserSubreddits(userId: string) {
     return []
   }
 }
+
+export async function uploadSubredditIcon(file: File): Promise<string> {
+  try {
+    const timestamp = Date.now()
+    const filename = `${timestamp}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "")}`
+    
+    const formData = new FormData()
+    formData.append("file", file)
+    formData.append("path", `public/subreddit/${filename}`)
+    
+    const response = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    })
+    
+    if (!response.ok) {
+      throw new Error("Upload failed")
+    }
+    
+    const data = await response.json()
+    return data.path || `/public/subreddit/${filename}`
+  } catch (error) {
+    console.error("Failed to upload subreddit icon:", error)
+    throw error
+  }
+}
+
+export async function updateSubredditIcon(subredditId: string, iconPath: string) {
+  try {
+    const updated = await databases.updateDocument(DATABASE_ID, SUBREDDITS_COLLECTION, subredditId, {
+      icon: iconPath,
+    })
+    return updated
+  } catch (error) {
+    console.error("Failed to update subreddit icon:", error)
+    throw error
+  }
+}

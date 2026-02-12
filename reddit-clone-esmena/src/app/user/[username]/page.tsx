@@ -8,7 +8,8 @@ import { Header } from "@/components/header"
 import { Sidebar } from "@/components/sidebar"
 import { PostCard } from "@/components/post-card"
 import { PostSkeleton } from "@/components/post-skeleton"
-import { getUserByUsername } from "@/lib/user"
+import { AvatarUploadModal } from "@/components/avatar-upload-modal"
+import { getUserByUsername, uploadUserAvatar, updateUserProfile } from "@/lib/user"
 import { getPostsByAuthor, enrichPosts } from "@/lib/post"
 import { useAuth } from "@/app/providers"
 
@@ -24,19 +25,22 @@ export default function UserProfile() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPosts, setTotalPosts] = useState(0)
+  const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false)
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
   const postsPerPage = 10
+  const { user } = useAuth()
 
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
-        console.log("[v0] Fetching profile for:", username)
+        console.log("Fetching profile for:", username)
         const profile = await getUserByUsername(username)
-        console.log("[v0] Profile fetched:", profile)
+        console.log("Profile fetched:", profile)
         setUserProfile(profile)
 
         if (profile) {
           const offset = (currentPage - 1) * postsPerPage
-          console.log("[v0] Fetching posts - userId:", profile.$id, "page:", currentPage, "offset:", offset)
+          console.log("Fetching posts - userId:", profile.$id, "page:", currentPage, "offset:", offset)
           const postsResponse = await getPostsByAuthor(profile.$id, postsPerPage, offset)
 setPosts(postsResponse.documents || [])
 console.log("Profile ID:", profile.$id)
@@ -45,7 +49,7 @@ console.log("Posts response:", postsResponse)
           setTotalPosts(postsResponse.total || 0)
         }
       } catch (error) {
-        console.error("[v0] Failed to fetch user profile:", error)
+        console.error("Failed to fetch user profile:", error)
       } finally {
         setIsLoading(false)
       }
@@ -60,6 +64,22 @@ console.log("Posts response:", postsResponse)
     if (page > 0 && page <= totalPages) {
       setCurrentPage(page)
       window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
+
+  const handleAvatarUpload = async (file: File) => {
+    try {
+      setIsUploadingAvatar(true)
+      const avatarPath = await uploadUserAvatar(file)
+      
+      if (userProfile && user && userProfile.$id === user.$id) {
+        await updateUserProfile(userProfile.$id, { avatar: avatarPath })
+        setUserProfile((prev: any) => ({ ...prev, avatar: avatarPath }))
+      }
+    } catch (error) {
+      console.error("Failed to upload avatar:", error)
+    } finally {
+      setIsUploadingAvatar(false)
     }
   }
 
@@ -126,9 +146,18 @@ console.log("Posts response:", postsResponse)
               {/* Profile Header - Compact Style */}
               <div className="flex items-start gap-4 mb-8">
                 {/* Avatar */}
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 text-white flex items-center justify-center font-bold text-3xl flex-shrink-0 shadow-md">
-                  {avatarInitial}
-                </div>
+                <button
+                  onClick={() => userProfile.$id === user?.$id && setIsAvatarModalOpen(true)}
+                  className={`w-24 h-24 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 text-white flex items-center justify-center font-bold text-3xl flex-shrink-0 shadow-md overflow-hidden transition-opacity ${
+                    userProfile.$id === user?.$id ? "hover:opacity-80 cursor-pointer" : ""
+                  }`}
+                >
+                  {userProfile?.avatar ? (
+                    <img src={userProfile.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    avatarInitial
+                  )}
+                </button>
                 
                 {/* User Info */}
                 <div className="flex-1">
@@ -331,6 +360,13 @@ console.log("Posts response:", postsResponse)
           </aside>
         </div>
       </div>
+
+      <AvatarUploadModal
+        isOpen={isAvatarModalOpen}
+        onClose={() => setIsAvatarModalOpen(false)}
+        onSave={handleAvatarUpload}
+        currentAvatar={userProfile?.avatar}
+      />
     </div>
   )
 }

@@ -1,11 +1,12 @@
 import { writeFile, mkdir } from 'fs/promises'
-import { join } from 'path'
+import { join, dirname } from 'path'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const file = formData.get('file') as File
+    const customPath = formData.get('path') as string | null
 
     if (!file) {
       return NextResponse.json(
@@ -32,35 +33,41 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Determine folder based on file type
-    const isVideo = file.type.startsWith('video/')
-    const folder = isVideo ? 'videos' : 'images'
+    let filepath: string
+    let fileUrl: string
 
-    // Create public folder path
-    const publicPath = join(process.cwd(), 'public', folder)
+    if (customPath && customPath.trim()) {
+      // Use custom path (e.g., "public/avatar/filename.jpg")
+      filepath = join(process.cwd(), customPath)
+      fileUrl = `/${customPath.replace(/^public\//, '')}`
+    } else {
+      // Determine folder based on file type (default behavior)
+      const isVideo = file.type.startsWith('video/')
+      const folder = isVideo ? 'videos' : 'images'
+
+      // Generate unique filename
+      const timestamp = Date.now()
+      const randomStr = Math.random().toString(36).substring(7)
+      const ext = file.name.split('.').pop()
+      const filename = `${timestamp}-${randomStr}.${ext}`
+
+      filepath = join(process.cwd(), 'public', folder, filename)
+      fileUrl = `/${folder}/${filename}`
+    }
 
     // Create directory if it doesn't exist
-    await mkdir(publicPath, { recursive: true })
-
-    // Generate unique filename
-    const timestamp = Date.now()
-    const randomStr = Math.random().toString(36).substring(7)
-    const ext = file.name.split('.').pop()
-    const filename = `${timestamp}-${randomStr}.${ext}`
+    const dirPath = dirname(filepath)
+    await mkdir(dirPath, { recursive: true })
 
     // Write file to disk
-    const filepath = join(publicPath, filename)
     const bytes = await file.arrayBuffer()
     await writeFile(filepath, Buffer.from(bytes))
-
-    // Return the file URL
-    const fileUrl = `/${folder}/${filename}`
 
     return NextResponse.json(
       {
         success: true,
+        path: fileUrl,
         fileUrl,
-        filename,
       },
       { status: 200 }
     )

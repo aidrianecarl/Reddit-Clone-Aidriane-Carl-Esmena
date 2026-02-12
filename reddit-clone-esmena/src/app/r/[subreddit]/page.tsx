@@ -8,7 +8,8 @@ import { Sidebar } from "@/components/sidebar"
 import { LoginModal } from "@/components/login-modal"
 import { SignupModal } from "@/components/signup-modal"
 import { PostCard } from "@/components/post-card"
-import { getSubredditByName } from "@/lib/subreddit"
+import { SubredditIconUploadModal } from "@/components/subreddit-icon-upload-modal"
+import { getSubredditByName, uploadSubredditIcon, updateSubredditIcon } from "@/lib/subreddit"
 import { getPostsBySubreddit, enrichPosts } from "@/lib/post"
 import { useAuth } from "@/app/providers"
 import { AuthModal } from "@/components/auth-modal"
@@ -26,8 +27,10 @@ export default function SubredditPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPosts, setTotalPosts] = useState(0)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
-  const { isAuthenticated, userProfile } = useAuth()
+  const { isAuthenticated, userProfile, user } = useAuth()
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
+  const [isIconModalOpen, setIsIconModalOpen] = useState(false)
+  const [isUploadingIcon, setIsUploadingIcon] = useState(false)
   const postsPerPage = 10
   const [hasMore, setHasMore] = useState(false)
 
@@ -81,6 +84,22 @@ export default function SubredditPage() {
     }
   }
 
+  const handleIconUpload = async (file: File) => {
+    try {
+      setIsUploadingIcon(true)
+      const iconPath = await uploadSubredditIcon(file)
+      
+      if (subreddit) {
+        await updateSubredditIcon(subreddit.$id, iconPath)
+        setSubreddit((prev: any) => ({ ...prev, icon: iconPath }))
+      }
+    } catch (error) {
+      console.error("Failed to upload icon:", error)
+    } finally {
+      setIsUploadingIcon(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-orange-50 dark:from-slate-950 to-white dark:to-slate-900">
@@ -131,12 +150,26 @@ export default function SubredditPage() {
               {/* Subreddit Header */}
               <div className="bg-white dark:bg-slate-900 rounded-lg overflow-hidden">
                 <div className="h-40 bg-gradient-to-r from-gray-300 dark:from-slate-700 to-gray-400 dark:to-slate-600 flex items-center justify-center relative">
-                  <div className="w-32 h-32 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white text-6xl font-bold shadow-lg">
-                    {subreddit.name?.charAt(0).toUpperCase()}
-                  </div>
-                  <button className="absolute top-4 right-4 w-10 h-10 bg-gray-700 dark:bg-gray-600 hover:bg-gray-800 dark:hover:bg-gray-700 rounded-full flex items-center justify-center text-white">
-                    ✎
+                  <button
+                    onClick={() => subreddit?.creatorId === user?.$id && setIsIconModalOpen(true)}
+                    className={`w-32 h-32 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white text-6xl font-bold shadow-lg overflow-hidden transition-opacity ${
+                      subreddit?.creatorId === user?.$id ? "hover:opacity-80 cursor-pointer" : ""
+                    }`}
+                  >
+                    {subreddit?.icon ? (
+                      <img src={subreddit.icon} alt="Community icon" className="w-full h-full object-cover" />
+                    ) : (
+                      subreddit.name?.charAt(0).toUpperCase()
+                    )}
                   </button>
+                  {subreddit?.creatorId === user?.$id && (
+                    <button
+                      onClick={() => setIsIconModalOpen(true)}
+                      className="absolute top-4 right-4 w-10 h-10 bg-gray-700 dark:bg-gray-600 hover:bg-gray-800 dark:hover:bg-gray-700 rounded-full flex items-center justify-center text-white"
+                    >
+                      ✎
+                    </button>
+                  )}
                 </div>
                 <div className="px-6 pb-6 pt-4">
                   <div className="flex items-start justify-between mb-4">
@@ -261,6 +294,14 @@ export default function SubredditPage() {
         }}
       />
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
+
+      <SubredditIconUploadModal
+        isOpen={isIconModalOpen}
+        onClose={() => setIsIconModalOpen(false)}
+        onSave={handleIconUpload}
+        currentIcon={subreddit?.icon}
+        subredditName={subreddit?.name}
+      />
     </div>
   )
 }

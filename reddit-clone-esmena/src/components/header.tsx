@@ -151,10 +151,14 @@ export function Header({ onLoginClick, onSignupClick, onMenuClick }: HeaderProps
               <div className="relative" ref={menuRef}>
                 <button
                   onClick={() => setShowUserMenu(!showUserMenu)}
-                  className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 text-white flex items-center justify-center font-bold text-sm hover:opacity-90 transition-opacity shadow-sm"
+                  className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 text-white flex items-center justify-center font-bold text-sm hover:opacity-90 transition-opacity shadow-sm overflow-hidden"
                   aria-label="User menu"
                 >
-                  {avatarInitial}
+                  {userProfile?.avatar ? (
+                    <img src={userProfile.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    avatarInitial
+                  )}
                 </button>
 
                 {showUserMenu && (

@@ -30,3 +30,29 @@ export async function updateUserProfile(docId: string, data: any) {
     throw error
   }
 }
+
+export async function uploadUserAvatar(file: File): Promise<string> {
+  try {
+    const timestamp = Date.now()
+    const filename = `${timestamp}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "")}`
+    
+    const formData = new FormData()
+    formData.append("file", file)
+    formData.append("path", `public/avatar/${filename}`)
+    
+    const response = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    })
+    
+    if (!response.ok) {
+      throw new Error("Upload failed")
+    }
+    
+    const data = await response.json()
+    return data.path || `/public/avatar/${filename}`
+  } catch (error) {
+    console.error("Failed to upload avatar:", error)
+    throw error
+  }
+}

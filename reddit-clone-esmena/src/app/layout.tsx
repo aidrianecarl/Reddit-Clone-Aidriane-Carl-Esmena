@@ -11,7 +11,6 @@ const _geistMono = Geist_Mono({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "Reddit Clone",
   description: "A minimal Reddit-like application built with Next.js and Appwrite",
-  generator: "v0.app",
 }
 
 export default function RootLayout({

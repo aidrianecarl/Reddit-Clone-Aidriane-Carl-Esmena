@@ -1,168 +1,128 @@
 "use client"
 
-import type React from "react"
-import { useState, useEffect } from "react"
-import { useRouter, useParams } from "next/navigation"
+import { useEffect, useState } from "react"
+import { useParams } from "next/navigation"
 import Link from "next/link"
-import { Bold, Italic, Strikethrough, Code, X, ChevronDown, Link2, ImageIcon } from "lucide-react"
-import { useAuth } from "@/app/providers"
-import { createPost } from "@/lib/post"
-import { getUserSubreddits } from "@/lib/subreddit"
+import { Share, Eye } from "lucide-react"
 import { Header } from "@/components/header"
 import { Sidebar } from "@/components/sidebar"
+import { PostCard } from "@/components/post-card"
+import { PostSkeleton } from "@/components/post-skeleton"
+import { AvatarUploadModal } from "@/components/avatar-upload-modal"
+import { getUserByUsername, uploadUserAvatar, updateUserProfile } from "@/lib/user"
+import { getPostsByAuthor, enrichPosts } from "@/lib/post"
+import { useAuth } from "@/app/providers"
 
-type PostType = "TEXT" | "IMAGE" | "LINK"
-
-export default function UserSubmitPage() {
-  const router = useRouter()
+export default function UserProfile() {
   const params = useParams()
   const username = params.username as string
-  const { user, userProfile, isAuthenticated } = useAuth()
-
-  const [title, setTitle] = useState("")
-  const [content, setContent] = useState("")
-  const [imagePreview, setImagePreview] = useState("")
-  const [linkUrl, setLinkUrl] = useState("")
-  const [userCommunities, setUserCommunities] = useState<any[]>([])
-  const [selectedCommunity, setSelectedCommunity] = useState<any>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [postType, setPostType] = useState<PostType>("TEXT")
-  const [error, setError] = useState("")
+  const [userProfile, setUserProfile] = useState<any>(null)
+  const [posts, setPosts] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-  const [showCommunityDropdown, setShowCommunityDropdown] = useState(false)
-  const [titleCharCount, setTitleCharCount] = useState(0)
+  const [activeTab, setActiveTab] = useState("overview")
+  const { isAuthenticated } = useAuth()
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPosts, setTotalPosts] = useState(0)
+  const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false)
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
+  const postsPerPage = 10
+  const { user } = useAuth()
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/")
-      return
-    }
+    const fetchUserProfile = async () => {
+      try {
+        console.log("Fetching profile for:", username)
+        const profile = await getUserByUsername(username)
+        console.log("Profile fetched:", profile)
+        setUserProfile(profile)
 
-    if (user) {
-      const fetchCommunities = async () => {
-        try {
-          const communities = await getUserSubreddits(user.$id)
-          setUserCommunities(communities)
-          if (communities.length > 0) {
-            setSelectedCommunity(communities[0])
-          }
-        } catch (err) {
-          console.error("Failed to fetch communities:", err)
+        if (profile) {
+          const offset = (currentPage - 1) * postsPerPage
+          console.log("Fetching posts - userId:", profile.$id, "page:", currentPage, "offset:", offset)
+          const postsResponse = await getPostsByAuthor(profile.$id, postsPerPage, offset)
+setPosts(postsResponse.documents || [])
+console.log("Profile ID:", profile.$id)
+console.log("Posts response:", postsResponse)
+
+          setTotalPosts(postsResponse.total || 0)
         }
+      } catch (error) {
+        console.error("Failed to fetch user profile:", error)
+      } finally {
+        setIsLoading(false)
       }
-      fetchCommunities()
     }
-  }, [isAuthenticated, user, router])
 
-  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newTitle = e.target.value
-    if (newTitle.length <= 300) {
-      setTitle(newTitle)
-      setTitleCharCount(newTitle.length)
+    fetchUserProfile()
+  }, [username, currentPage])
+
+  const totalPages = Math.ceil(totalPosts / postsPerPage)
+
+  const goToPage = (page: number) => {
+    if (page > 0 && page <= totalPages) {
+      setCurrentPage(page)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     }
   }
 
-  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
+  const handleAvatarUpload = async (file: File) => {
     try {
-      const formData = new FormData()
-      formData.append("file", file)
-
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Upload failed")
+      setIsUploadingAvatar(true)
+      const avatarPath = await uploadUserAvatar(file)
+      
+      if (userProfile) {
+        await updateUserProfile(userProfile.$id, { avatar: avatarPath })
+        setUserProfile((prev: any) => ({ ...prev, avatar: avatarPath }))
       }
-
-      const data = await response.json()
-      setImagePreview(data.fileUrl)
-    } catch (err: any) {
-      setError(err.message || "Failed to upload image")
-      console.error("Upload error:", err)
-    }
-  }
-
-  const handleDragDrop = async (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    e.stopPropagation()
-    const file = e.dataTransfer.files?.[0]
-    if (!file || !file.type.startsWith("image/")) return
-
-    try {
-      const formData = new FormData()
-      formData.append("file", file)
-
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Upload failed")
-      }
-
-      const data = await response.json()
-      setImagePreview(data.fileUrl)
-    } catch (err: any) {
-      setError(err.message || "Failed to upload image")
-      console.error("Upload error:", err)
-    }
-  }
-
-  const handleCreatePost = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
-
-    if (!title.trim()) {
-      setError("Title is required")
-      return
-    }
-
-    if (postType === "IMAGE" && !imagePreview) {
-      setError("Please upload an image")
-      return
-    }
-
-    if (postType === "LINK" && !linkUrl.trim()) {
-      setError("Please enter a link URL")
-      return
-    }
-
-    setIsLoading(true)
-    try {
-      await createPost({
-        title,
-        content: postType === "LINK" ? linkUrl : content || "",
-        imageUrl: imagePreview || "",
-        subredditId: selectedCommunity ? selectedCommunity.$id : "",
-        authorId: user?.$id || "",
-        postType: postType.toLowerCase() as "text" | "image" | "link",
-      })
-
-      router.push(`/user/${username}`)
-    } catch (err: any) {
-      setError(err.message || "Failed to create post")
+    } catch (error) {
+      console.error("Failed to upload avatar:", error)
     } finally {
-      setIsLoading(false)
+      setIsUploadingAvatar(false)
     }
   }
 
-  if (!isAuthenticated) {
+  const avatarInitial = userProfile?.name?.[0]?.toUpperCase() || "U"
+  const memberSince = userProfile?.$createdAt 
+    ? new Date(userProfile.$createdAt).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    : "Unknown"
+
+  // Calculate reddit age in weeks
+  const redditAgeWeeks = userProfile?.$createdAt
+    ? Math.floor((Date.now() - new Date(userProfile.$createdAt).getTime()) / (7 * 24 * 60 * 60 * 1000))
+    : 0
+
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-white dark:bg-slate-950">
         <Header onLoginClick={() => {}} onSignupClick={() => {}} onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
         <div className="flex relative">
-          <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} isAuthenticated={false} isCollapsed={isSidebarCollapsed} onToggleCollapse={() => setIsSidebarCollapsed((v) => !v)} />
+          <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} isAuthenticated={isAuthenticated} isCollapsed={isSidebarCollapsed} onToggleCollapse={() => {}} />
+          <main className="flex-1 max-w-4xl px-6 py-6">
+            <div className="space-y-4">
+              {[...Array(5)].map((_, i) => (
+                <PostSkeleton key={i} />
+              ))}
+            </div>
+          </main>
+        </div>
+      </div>
+    )
+  }
+
+  if (!userProfile) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-slate-950">
+        <Header onLoginClick={() => {}} onSignupClick={() => {}} onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
+        <div className="flex relative">
+          <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} isAuthenticated={isAuthenticated} isCollapsed={isSidebarCollapsed} onToggleCollapse={() => {}} />
           <main className="flex-1 flex items-center justify-center min-h-screen">
-            <p className="text-gray-600 dark:text-gray-400">Please log in to create a post.</p>
+            <p className="text-gray-500 dark:text-gray-400">User not found</p>
           </main>
         </div>
       </div>
@@ -176,204 +136,237 @@ export default function UserSubmitPage() {
       <div className="flex relative">
         <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} isAuthenticated={isAuthenticated} isCollapsed={isSidebarCollapsed} onToggleCollapse={() => setIsSidebarCollapsed((v) => !v)} />
 
-        <main className={`flex-1 max-w-2xl mx-auto px-4 py-8 transition-[margin] duration-300 ease-in-out ${
-          isSidebarCollapsed ? "lg:ml-20" : "lg:ml-64"
-        }`}>
-          <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg p-6 shadow-sm">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Create post on your profile</h1>
-
-            <div className="mb-6 flex items-center justify-between">
-              <div className="flex-1">
-                <div className="relative">
-                  <button
-                    onClick={() => setShowCommunityDropdown(!showCommunityDropdown)}
-                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-full font-semibold text-sm text-gray-900 dark:text-white transition-colors"
-                  >
-                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-white text-xs font-bold">
-                      {selectedCommunity?.name?.[0]?.toUpperCase() || userProfile?.name?.[0]?.toUpperCase() || "U"}
-                    </div>
-                    <span>{selectedCommunity ? `r/${selectedCommunity.name}` : `u/${userProfile?.name}`}</span>
-                    <ChevronDown size={18} />
-                  </button>
-
-                  {showCommunityDropdown && (
-                    <div className="absolute top-full left-0 mt-2 w-64 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
-                      <div className="px-4 py-2 text-xs font-semibold text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-slate-800">
-                        YOUR COMMUNITIES
-                      </div>
-                      {userCommunities.length > 0 ? (
-                        userCommunities.map((community) => (
-                          <button
-                            key={community.$id}
-                            onClick={() => {
-                              setSelectedCommunity(community)
-                              setShowCommunityDropdown(false)
-                            }}
-                            className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors text-gray-900 dark:text-white"
-                          >
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                              {community.name[0].toUpperCase()}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-sm">r/{community.name}</p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{community.description}</p>
-                            </div>
-                          </button>
-                        ))
-                      ) : (
-                        <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">No communities joined</div>
-                      )}
-
-                      <div className="border-t border-gray-200 dark:border-slate-700 px-4 py-2 text-xs font-semibold text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-slate-800">
-                        YOUR PROFILE
-                      </div>
-                      <button
-                        onClick={() => {
-                          setSelectedCommunity(null)
-                          setShowCommunityDropdown(false)
-                        }}
-                        className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors text-gray-900 dark:text-white"
-                      >
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                          {userProfile?.name?.[0]?.toUpperCase() || "U"}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm">u/{userProfile?.name}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">Your profile</p>
-                        </div>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Drafts</p>
-            </div>
-
-            <div className="flex gap-6 border-b border-gray-200 dark:border-slate-800 mb-6">
-              {(["TEXT", "IMAGE", "LINK"] as PostType[]).map((tab) => (
+        {/* Main Content */}
+        <div className="flex flex-1 gap-6">
+          {/* Feed */}
+          <main className={`flex-1 transition-[margin] duration-300 ease-in-out ${
+            isSidebarCollapsed ? "lg:ml-20" : "lg:ml-64"
+          }`}>
+            <div className="max-w-3xl mx-auto py-6">
+              {/* Profile Header - Compact Style */}
+              <div className="flex items-start gap-4 mb-8">
+                {/* Avatar */}
                 <button
-                  key={tab}
-                  onClick={() => setPostType(tab)}
-                  className={`pb-3 font-semibold text-sm transition-colors ${
-                    postType === tab
-                      ? "text-gray-900 dark:text-white border-b-2 border-orange-600"
-                      : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                  onClick={() => userProfile.$id === user?.$id && setIsAvatarModalOpen(true)}
+                  className={`w-24 h-24 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 text-white flex items-center justify-center font-bold text-3xl flex-shrink-0 shadow-md overflow-hidden transition-opacity ${
+                    userProfile.$id === user?.$id ? "hover:opacity-80 cursor-pointer" : ""
                   }`}
                 >
-                  {tab === "IMAGE" ? "Images & Video" : tab === "LINK" ? "Link" : tab}
+                  {userProfile?.avatar ? (
+                    <img src={userProfile.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    avatarInitial
+                  )}
                 </button>
-              ))}
-            </div>
-
-            <form onSubmit={handleCreatePost} className="space-y-4">
-              <div>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={handleTitleChange}
-                  placeholder="Title"
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                />
-                <p className="text-right text-sm text-gray-500 dark:text-gray-400 mt-2">{titleCharCount}/300</p>
+                
+                {/* User Info */}
+                <div className="flex-1">
+                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{userProfile.name}</h1>
+                  <p className="text-gray-600 dark:text-gray-400">u/{userProfile.name}</p>
+                </div>
               </div>
 
-              <button type="button" className="px-3 py-2 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 rounded-full text-sm font-medium hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors">
-                Add tags
-              </button>
+              {/* Tabs */}
+              <div className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 sticky top-16 z-20 overflow-x-auto -mx-6 px-6 mb-6">
+                <div className="flex gap-6 whitespace-nowrap">
+                  {["overview", "posts", "comments", "saved", "history", "hidden", "upvoted", "downvoted"].map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => setActiveTab(tab)}
+                      className={`py-3 font-medium text-sm border-b-2 transition-colors ${
+                        activeTab === tab
+                          ? "text-gray-900 dark:text-white border-orange-600"
+                          : "text-gray-600 dark:text-gray-400 border-transparent hover:text-gray-900 dark:hover:text-white"
+                      }`}
+                    >
+                      {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-              {postType === "IMAGE" && (
-                <div
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={handleDragDrop}
-                  className="border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-lg p-12 text-center cursor-pointer hover:border-gray-400 dark:hover:border-slate-600 transition-colors"
-                >
-                  {imagePreview ? (
-                    <div className="relative">
-                      <img src={imagePreview || "/placeholder.svg"} alt="Preview" className="max-h-96 mx-auto rounded-lg" />
-                      <button
-                        type="button"
-                        onClick={() => setImagePreview("")}
-                        className="absolute top-2 right-2 p-1 bg-red-600 hover:bg-red-700 text-white rounded-full transition-colors"
-                      >
-                        <X size={20} />
-                      </button>
+              {/* Content */}
+              {activeTab === "overview" && (
+                <div className="space-y-6">
+                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 mb-4">
+                    <Eye size={18} />
+                    <span>Showing all content</span>
+                  </div>
+
+                  {posts.length > 0 && (
+                    <div className="space-y-4">
+                      {posts.slice(0, 3).map((post) => (
+                        <PostCard key={post.$id} post={post} />
+                      ))}
                     </div>
-                  ) : (
-                    <label className="cursor-pointer">
-                      <div className="flex flex-col items-center gap-2">
-                        <ImageIcon size={32} className="text-gray-400" />
-                        <p className="text-gray-600 dark:text-gray-400 font-medium">Drag and Drop or upload media</p>
-                      </div>
-                      <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
-                    </label>
                   )}
                 </div>
               )}
 
-              {postType === "TEXT" && (
-                <div className="border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden">
-                  <div className="flex gap-1 p-2 bg-gray-50 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 flex-wrap">
-                    <button type="button" className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded transition-colors" title="Bold">
-                      <Bold size={18} className="text-gray-600 dark:text-gray-400" />
-                    </button>
-                    <button type="button" className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded transition-colors" title="Italic">
-                      <Italic size={18} className="text-gray-600 dark:text-gray-400" />
-                    </button>
-                    <button type="button" className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded transition-colors" title="Strikethrough">
-                      <Strikethrough size={18} className="text-gray-600 dark:text-gray-400" />
-                    </button>
-                    <button type="button" className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded transition-colors" title="Code">
-                      <Code size={18} className="text-gray-600 dark:text-gray-400" />
-                    </button>
-                    <button type="button" className="p-2 hover:bg-gray-200 dark:hover:bg-slate-700 rounded transition-colors" title="Link">
-                      <Link2 size={18} className="text-gray-600 dark:text-gray-400" />
-                    </button>
+              {activeTab === "posts" && (
+                <>
+                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 mb-6">
+                    <Eye size={18} />
+                    <span>Showing all content</span>
                   </div>
-                  <textarea
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    placeholder="Text (optional)"
-                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border-0 rounded-b-lg focus:outline-none dark:text-white placeholder-gray-500 dark:placeholder-gray-400 min-h-32 resize-none"
-                  />
+
+                  {isLoading ? (
+                    <div className="space-y-4">
+                      {[...Array(5)].map((_, i) => (
+                        <PostSkeleton key={i} />
+                      ))}
+                    </div>
+                  ) : posts.length > 0 ? (
+                    <>
+                      <div className="space-y-4 mb-8">
+                        {posts.map((post) => (
+                          <PostCard key={post.$id} post={post} />
+                        ))}
+                      </div>
+
+                      {/* Pagination Controls */}
+                      {totalPages > 1 && (
+                        <div className="flex items-center justify-center gap-2 pb-6">
+                          <button
+                            onClick={() => goToPage(currentPage - 1)}
+                            disabled={currentPage === 1}
+                            className="px-4 py-2 bg-gray-100 dark:bg-slate-800 text-gray-900 dark:text-white rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            Previous
+                          </button>
+                          
+                          <div className="flex items-center gap-1">
+                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                              <button
+                                key={page}
+                                onClick={() => goToPage(page)}
+                                className={`px-3 py-2 rounded-lg font-medium transition-colors ${
+                                  currentPage === page
+                                    ? 'bg-orange-600 text-white'
+                                    : 'bg-gray-100 dark:bg-slate-800 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-slate-700'
+                                }`}
+                              >
+                                {page}
+                              </button>
+                            ))}
+                          </div>
+                          
+                          <button
+                            onClick={() => goToPage(currentPage + 1)}
+                            disabled={currentPage === totalPages}
+                            className="px-4 py-2 bg-gray-100 dark:bg-slate-800 text-gray-900 dark:text-white rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            Next
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-center py-12">
+                      <p className="text-gray-500 dark:text-gray-400">No posts yet</p>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {["comments", "saved", "history", "hidden", "upvoted", "downvoted"].includes(activeTab) && (
+                <div className="text-center py-12">
+                  <p className="text-gray-500 dark:text-gray-400">Coming soon...</p>
                 </div>
               )}
+            </div>
+          </main>
 
-              {postType === "LINK" && (
-                <input
-                  type="url"
-                  value={linkUrl}
-                  onChange={(e) => setLinkUrl(e.target.value)}
-                  placeholder="https://example.com"
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                />
-              )}
+          {/* Right Sidebar */}
+          <aside className="hidden xl:block w-80">
+            <div className="sticky top-20 space-y-4">
+              {/* Profile Card */}
+              <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg overflow-hidden">
+                {/* Dark Banner */}
+                <div className="h-24 bg-gradient-to-r from-blue-900 via-blue-800 to-slate-900"></div>
 
-              {error && (
-                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 rounded-lg text-sm">
-                  {error}
+                {/* Card Content */}
+                <div className="px-4 py-4">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">{userProfile.name}</h3>
+
+                  <button className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-900 dark:text-white rounded-full font-semibold transition-colors mb-6">
+                    <Share size={16} />
+                    <span>Share</span>
+                  </button>
+
+                  {/* Stats Grid */}
+                  <div className="space-y-4 mb-6">
+                    <div className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-slate-800">
+                      <span className="text-gray-600 dark:text-gray-400">followers</span>
+                      <span className="text-lg font-bold text-gray-900 dark:text-white">0</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white">1</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">Karma</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white">{totalPosts}</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">Contributions</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-200 dark:border-slate-800">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white">{redditAgeWeeks}w</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">Reddit Age</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white">1</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">Active in</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Achievements */}
+                  <div className="border-t border-gray-200 dark:border-slate-800 pt-4 mb-4">
+                    <h4 className="text-xs font-bold uppercase text-gray-600 dark:text-gray-400 mb-3">Achievements</h4>
+                    <div className="flex gap-2 mb-2">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white text-xs font-bold">🏆</div>
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center text-white text-xs font-bold">⭐</div>
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-xs font-bold">🎯</div>
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">6 unlocked <button className="text-orange-600 hover:underline">View All</button></p>
+                  </div>
                 </div>
-              )}
-
-              <div className="flex gap-3 justify-end pt-4 border-t border-gray-200 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => router.back()}
-                  className="px-6 py-2 bg-gray-100 dark:bg-slate-800 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-slate-700 rounded-full font-semibold transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="px-6 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white rounded-full font-semibold transition-colors"
-                >
-                  {isLoading ? "Posting..." : "Post"}
-                </button>
               </div>
-            </form>
-          </div>
-        </main>
+
+              {/* Settings Card */}
+              <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg p-4">
+                <h4 className="text-xs font-bold uppercase text-gray-600 dark:text-gray-400 mb-3">Settings</h4>
+                <div className="space-y-3">
+                  {[
+                    { title: "Profile", desc: "Customize your profile", icon: "👤" },
+                    { title: "Avatar", desc: "Style your avatar", icon: "🖼️" },
+                    { title: "Banner", desc: "Customize your banner", icon: "🎨" },
+                  ].map((setting) => (
+                    <div key={setting.title} className="flex items-start justify-between gap-2">
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white">{setting.title}</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">{setting.desc}</p>
+                      </div>
+                      <button className="text-xs font-semibold text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-slate-800 px-3 py-1 rounded transition-colors">
+                        Update
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
       </div>
+
+      <AvatarUploadModal
+        isOpen={isAvatarModalOpen}
+        onClose={() => setIsAvatarModalOpen(false)}
+        onSave={handleAvatarUpload}
+        currentAvatar={userProfile?.avatar}
+      />
     </div>
   )
 }

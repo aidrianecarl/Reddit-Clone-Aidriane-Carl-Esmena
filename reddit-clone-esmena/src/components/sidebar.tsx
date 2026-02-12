@@ -148,10 +148,14 @@ export function Sidebar({
                           href={`/r/${sr.name}`}
                           className="flex items-center gap-3 px-3 py-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
                         >
-                          <div className="w-6 h-6 rounded-full bg-orange-500 text-white flex items-center justify-center text-xs font-bold">
-                            {sr.name[0].toUpperCase()}
+                          <div className="w-6 h-6 rounded-full bg-orange-500 text-white flex items-center justify-center text-xs font-bold overflow-hidden flex-shrink-0">
+                            {sr.icon ? (
+                              <img src={sr.icon} alt={sr.name} className="w-full h-full object-cover" />
+                            ) : (
+                              sr.name[0].toUpperCase()
+                            )}
                           </div>
-                          r/{sr.name}
+                          {!isCollapsed && `r/${sr.name}`}
                         </Link>
                       ))
                     )}

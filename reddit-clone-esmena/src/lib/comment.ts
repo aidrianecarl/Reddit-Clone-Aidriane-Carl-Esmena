@@ -121,3 +121,38 @@ export async function updateCommentReplyCount(commentId: string, count: number) 
     console.error("Failed to update reply count:", error)
   }
 }
+
+export async function getNestedCommentCount(parentCommentId: string) {
+  try {
+    const response = await databases.listDocuments(DATABASE_ID, NESTED_COMMENTS_COLLECTION, [
+      Query.equal("comments", parentCommentId),
+    ])
+    return response.total
+  } catch (error) {
+    console.error("Failed to fetch nested comment count:", error)
+    return 0
+  }
+}
+
+export async function getCommentsWithCounts(postId: string) {
+  try {
+    const commentsResponse = await getCommentsByPost(postId)
+    const enrichedComments = await enrichComments(commentsResponse.documents)
+    
+    // Get reply count for each comment
+    const commentsWithCounts = await Promise.all(
+      enrichedComments.map(async (comment) => {
+        const replyCount = await getNestedCommentCount(comment.$id)
+        return {
+          ...comment,
+          replyCount: replyCount,
+        }
+      })
+    )
+    
+    return commentsWithCounts
+  } catch (error) {
+    console.error("Failed to fetch comments with counts:", error)
+    return []
+  }
+}

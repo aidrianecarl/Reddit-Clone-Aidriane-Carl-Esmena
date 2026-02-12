@@ -8,7 +8,7 @@ import { AuthModal } from "@/components/auth-modal"
 import { CommentForm } from "@/components/comment-form"
 import { CommentThread } from "@/components/comment-thread"
 import { getPostById, enrichPost } from "@/lib/post"
-import { getCommentsByPost, enrichComments, getNestedCommentsWithUsers } from "@/lib/comment"
+import { getCommentsWithCounts, getNestedCommentsWithUsers } from "@/lib/comment"
 import { useAuth } from "@/app/providers"
 import { ArrowUp, ArrowDown, MessageCircle } from "lucide-react"
 import { getUserVote, voteOnPost } from "@/lib/vote"
@@ -49,9 +49,8 @@ export default function PostPage() {
           }
         }
 
-        const commentsResponse = await getCommentsByPost(postId)
-        const enrichedComments = await enrichComments(commentsResponse.documents)
-        setComments(enrichedComments)
+        const commentsWithCounts = await getCommentsWithCounts(postId)
+        setComments(commentsWithCounts)
       } catch (error) {
         console.error("Failed to fetch data:", error)
       } finally {
@@ -63,9 +62,8 @@ export default function PostPage() {
   }, [postId, isAuthenticated, user])
 
   const handleCommentCreated = async () => {
-    const commentsResponse = await getCommentsByPost(postId)
-    const enrichedComments = await enrichComments(commentsResponse.documents)
-    setComments(enrichedComments)
+    const commentsWithCounts = await getCommentsWithCounts(postId)
+    setComments(commentsWithCounts)
   }
 
   const handleReplyClick = async (commentId: string) => {
