@@ -49,9 +49,9 @@ export default function CreateSubreddit() {
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-white">
-        <Header onAuthClick={() => {}} onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
+        <Header onLoginClick={() => {}} onSignupClick={() => {}} onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
         <div className="flex">
-          <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} isAuthenticated={false} />
+          <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} isAuthenticated={false} isCollapsed={false} onToggleCollapse={() => {}} />
           <main className="flex-1 flex items-center justify-center min-h-screen">
             <div className="text-center">
               <p className="text-gray-600 mb-6">You must be logged in to create a community</p>
@@ -64,10 +64,10 @@ export default function CreateSubreddit() {
 
   return (
     <div className="min-h-screen bg-white">
-      <Header onAuthClick={() => {}} onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
+      <Header onLoginClick={() => {}} onSignupClick={() => {}} onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
 
       <div className="flex">
-        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} isAuthenticated={isAuthenticated} />
+        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} isAuthenticated={isAuthenticated} isCollapsed={false} onToggleCollapse={() => {}} />
 
         <main className="flex-1 max-w-2xl mx-auto px-4 py-6">
           <div className="bg-white border border-gray-200 rounded-lg p-8">

@@ -256,8 +256,12 @@ export default function SubmitPage() {
                     onClick={() => setShowCommunityDropdown(!showCommunityDropdown)}
                     className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-full font-semibold text-sm text-gray-900 dark:text-white transition-colors"
                   >
-                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white text-xs font-bold">
-                      {subreddit?.name?.[0]?.toUpperCase() || "r"}
+                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white text-xs font-bold overflow-hidden">
+                      {subreddit?.icon ? (
+                        <img src={subreddit.icon} alt="icon" className="w-full h-full object-cover" />
+                      ) : (
+                        subreddit?.name?.[0]?.toUpperCase() || "r"
+                      )}
                     </div>
                     <span>{subreddit ? `r/${subreddit.name}` : "Select a community"}</span>
                     <ChevronDown size={18} />
@@ -279,8 +283,12 @@ export default function SubmitPage() {
                               onClick={() => setShowCommunityDropdown(false)}
                               className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors text-gray-900 dark:text-white"
                             >
-                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                                {community.name[0].toUpperCase()}
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 overflow-hidden">
+                                {community.icon ? (
+                                  <img src={community.icon} alt="icon" className="w-full h-full object-cover" />
+                                ) : (
+                                  community.name[0].toUpperCase()
+                                )}
                               </div>
                               <div className="flex-1 min-w-0">
                                 <p className="font-medium text-sm">r/{community.name}</p>
@@ -301,8 +309,12 @@ export default function SubmitPage() {
                           onClick={() => setShowCommunityDropdown(false)}
                           className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors text-gray-900 dark:text-white"
                         >
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                            {userProfile?.name?.[0]?.toUpperCase() || "U"}
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 overflow-hidden">
+                            {userProfile?.avatar ? (
+                              <img src={userProfile.avatar} alt="avatar" className="w-full h-full object-cover" />
+                            ) : (
+                              userProfile?.name?.[0]?.toUpperCase() || "U"
+                            )}
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-sm">u/{userProfile?.name}</p>

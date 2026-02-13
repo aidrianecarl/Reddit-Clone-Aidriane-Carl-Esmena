@@ -2,9 +2,11 @@
 
 import Link from "next/link"
 import { MessageCircle, ArrowUp, ArrowDown, Share } from "lucide-react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { voteOnPost, getUserVote } from "@/lib/vote"
 import { useAuth } from "@/app/providers"
+import { usePostRealtime } from "@/hooks/use-realtime"
+import { databases, DATABASE_ID, POSTS_COLLECTION } from "@/lib/appwrite"
 
 interface PostCardProps {
   post: any
@@ -16,6 +18,16 @@ export function PostCard({ post }: PostCardProps) {
   const [downvoteCount, setDownvoteCount] = useState(post.downvotes || 0)
   const [isVoting, setIsVoting] = useState(false)
   const { user, isAuthenticated } = useAuth()
+
+  const refreshPostVotes = useCallback(async () => {
+    try {
+      const updatedPost = await databases.getDocument(DATABASE_ID, POSTS_COLLECTION, post.$id)
+      setUpvoteCount(updatedPost.upvotes || 0)
+      setDownvoteCount(updatedPost.downvotes || 0)
+    } catch (error) {
+      console.error("Failed to refresh post votes:", error)
+    }
+  }, [post.$id])
 
   useEffect(() => {
     const fetchUserVote = async () => {
@@ -29,6 +41,11 @@ export function PostCard({ post }: PostCardProps) {
 
     fetchUserVote()
   }, [isAuthenticated, user, post.$id])
+
+  // Subscribe to real-time vote updates
+  usePostRealtime(post.$id, (message) => {
+    refreshPostVotes()
+  })
 
   const handleUpvote = async () => {
     if (!isAuthenticated || !user) return
@@ -68,8 +85,12 @@ export function PostCard({ post }: PostCardProps) {
       {/* Header with subreddit info and time */}
       <div className="px-4 py-2 flex items-center justify-between bg-white dark:bg-slate-900">
         <div className="flex items-center gap-2">
-          <div className="w-5 h-5 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-            {subredditName.charAt(0).toUpperCase()}
+          <div className="w-5 h-5 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 overflow-hidden">
+            {post.subreddit?.icon ? (
+              <img src={post.subreddit.icon} alt="icon" className="w-full h-full object-cover" />
+            ) : (
+              subredditName.charAt(0).toUpperCase()
+            )}
           </div>
           <span className="text-xs text-gray-500 dark:text-gray-400">r/{subredditName} • {timeAgo}</span>
         </div>

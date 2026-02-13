@@ -163,8 +163,12 @@ export default function Home() {
               {/* Create Post */}
               {isAuthenticated && (
                 <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg p-4 flex gap-4 shadow-sm">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
-                    {userProfile?.name?.[0]?.toUpperCase() || "U"}
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 text-white flex items-center justify-center font-bold text-sm flex-shrink-0 overflow-hidden">
+                    {userProfile?.avatar ? (
+                      <img src={userProfile.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      userProfile?.name?.[0]?.toUpperCase() || "U"
+                    )}
                   </div>
                   <Link
                     href="/r/popular/submit?type=TEXT"
@@ -271,9 +275,9 @@ export default function Home() {
                       className="flex gap-3 group hover:bg-gray-50 dark:hover:bg-slate-800 p-2 rounded-lg transition-colors"
                     >
                       <div className="w-16 h-16 bg-gray-200 dark:bg-slate-800 rounded flex-shrink-0 overflow-hidden">
-                        {post.image ? (
+                        {post.imageUrl ? (
                           <img
-                            src={post.image || "/placeholder.svg"}
+                            src={post.imageUrl || "/placeholder.svg"}
                             alt={post.title}
                             className="w-full h-full object-cover group-hover:opacity-80 transition-opacity"
                           />
@@ -285,13 +289,13 @@ export default function Home() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                          r/{post.subreddit?.name || "Unknown"}
+                          r/{post.subredditName || "Unknown"}
                         </p>
                         <p className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2 group-hover:text-orange-600 transition-colors">
                           {post.title}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          {post.upvotes || 0} upvotes • {post.comments?.length || 0} comments
+                          {post.upvotes || 0} upvotes • {post.commentCount || 0} comments
                         </p>
                       </div>
                     </Link>

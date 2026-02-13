@@ -121,9 +121,9 @@ export default function CreatePostPage() {
     } catch (error: any) {
       if (error instanceof ZodError) {
         const errors: Record<string, string> = {}
-        error.errors.forEach((err) => {
-          const path = err.path.join(".")
-          errors[path] = err.message
+        error.issues.forEach((issue: any) => {
+          const path = issue.path.join(".")
+          errors[path] = issue.message
         })
         setValidationErrors(errors)
         setError("Please check the form for errors")
@@ -145,7 +145,7 @@ export default function CreatePostPage() {
       <Header onLoginClick={() => {}} onSignupClick={() => {}} onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
 
       <div className="flex">
-        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} isAuthenticated={isAuthenticated} />
+        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} isAuthenticated={isAuthenticated} isCollapsed={false} onToggleCollapse={() => {}} />
 
         {/* Main Content - flex-1 makes it automatically stretch/shrink with sidebar */}
         <main className="flex-1 max-w-3xl mx-auto px-4 py-8 w-full">

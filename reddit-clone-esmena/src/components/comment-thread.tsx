@@ -1,9 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { ArrowUp, ArrowDown, MessageCircle } from "lucide-react"
 import { voteOnComment, getUserVote } from "@/lib/vote"
 import { useAuth } from "@/app/providers"
+import { useCommentRealtime } from "@/hooks/use-realtime"
+import { databases, DATABASE_ID, COMMENTS_COLLECTION } from "@/lib/appwrite"
 
 interface CommentThreadProps {
   comment: any
@@ -29,6 +31,16 @@ export function CommentThread({
   const [isVoting, setIsVoting] = useState(false)
   const { user, isAuthenticated } = useAuth()
 
+  const refreshCommentVotes = useCallback(async () => {
+    try {
+      const updatedComment = await databases.getDocument(DATABASE_ID, COMMENTS_COLLECTION, comment.$id)
+      setUpvoteCount(updatedComment.upvotes || 0)
+      setDownvoteCount(updatedComment.downvotes || 0)
+    } catch (error) {
+      console.error("Failed to refresh comment votes:", error)
+    }
+  }, [comment.$id])
+
   useEffect(() => {
     const fetchUserVote = async () => {
       if (isAuthenticated && user) {
@@ -41,6 +53,11 @@ export function CommentThread({
 
     fetchUserVote()
   }, [isAuthenticated, user, comment.$id])
+
+  // Subscribe to real-time vote updates for comments
+  useCommentRealtime(comment.$id, (message) => {
+    refreshCommentVotes()
+  })
 
   const handleUpvote = async () => {
     if (!isAuthenticated || !user) return

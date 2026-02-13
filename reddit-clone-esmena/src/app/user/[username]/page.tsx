@@ -42,9 +42,17 @@ export default function UserProfile() {
           const offset = (currentPage - 1) * postsPerPage
           console.log("Fetching posts - userId:", profile.$id, "page:", currentPage, "offset:", offset)
           const postsResponse = await getPostsByAuthor(profile.$id, postsPerPage, offset)
-setPosts(postsResponse.documents || [])
-console.log("Profile ID:", profile.$id)
-console.log("Posts response:", postsResponse)
+          console.log("Profile ID:", profile.$id)
+          console.log("Posts response:", postsResponse)
+          
+          // Enrich posts with author and subreddit data
+          try {
+            const enriched = await enrichPosts(postsResponse.documents || [])
+            setPosts(enriched)
+          } catch (enrichError) {
+            console.warn("Failed to enrich posts, showing raw data:", enrichError)
+            setPosts(postsResponse.documents || [])
+          }
 
           setTotalPosts(postsResponse.total || 0)
         }
